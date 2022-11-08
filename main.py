@@ -5,11 +5,10 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
+from omegaconf import OmegaConf
 
 import inference
 import train
-
-from omegaconf import OmegaConf
 
 # fix random seeds for reproducibility
 
@@ -34,6 +33,7 @@ if __name__ == "__main__":
     random.seed(SEED)
     np.random.seed(SEED)
     torch.manual_seed(SEED)
+    torch.cuda.manual_seed(SEED)
     torch.cuda.manual_seed_all(SEED)
     torch.backends.cudnn.benchmark = False
     torch.use_deterministic_algorithms(True)

@@ -9,7 +9,14 @@ from . import loss as loss_module
 
 
 class Model(pl.LightningModule):
-    def __init__(self, model_name, lr, loss, new_vocab_size, use_freeze):  # 새로운 vocab 사이즈 설정
+    def __init__(
+        self,
+        model_name,
+        lr,
+        loss,
+        new_vocab_size,
+        use_freeze,
+    ):  # 새로운 vocab 사이즈 설정
         super().__init__()
         self.save_hyperparameters()
 
@@ -82,7 +89,14 @@ class Model(pl.LightningModule):
 
 
 class Klue_CustomModel(pl.LightningModule):
-    def __init__(self, model_name, lr, loss, new_vocab_size, use_freeze):
+    def __init__(
+        self,
+        model_name,
+        lr,
+        loss,
+        new_vocab_size,
+        use_freeze,
+    ):
         super().__init__()
         self.save_hyperparameters()
         self.model_name = model_name
@@ -163,7 +177,14 @@ class Klue_CustomModel(pl.LightningModule):
 
 
 class Funnel_CustomModel(pl.LightningModule):  # 스케줄러 사용
-    def __init__(self, model_name, lr, loss, new_vocab_size, use_freeze):
+    def __init__(
+        self,
+        model_name,
+        lr,
+        loss,
+        new_vocab_size,
+        use_freeze,
+    ):
         super().__init__()
         self.save_hyperparameters()
         self.model_name = model_name
@@ -248,7 +269,14 @@ class Funnel_CustomModel(pl.LightningModule):  # 스케줄러 사용
 
 
 class Xlm_CustomModel(pl.LightningModule):
-    def __init__(self, model_name, lr, loss, new_vocab_size, use_freeze):  # 새로운 vocab 사이즈 설정
+    def __init__(
+        self,
+        model_name,
+        lr,
+        loss,
+        new_vocab_size,
+        use_freeze,
+    ):  # 새로운 vocab 사이즈 설정
         super().__init__()
         self.save_hyperparameters()
 
