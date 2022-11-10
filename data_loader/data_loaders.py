@@ -111,8 +111,9 @@ class Dataloader(pl.LightningDataModule):
 
     def tokenizing(self, dataframe, swap):
         data = []
+        sep_token = self.tokenizer.special_tokens_map["sep_token"]
         for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
-            text = "[SEP]".join([item[text_column] for text_column in self.text_columns])
+            text = sep_token.join([item[text_column] for text_column in self.text_columns])
             if self.use_preprocessing:
                 text = utils.text_preprocessing(text)  # 전처리 추가
             outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
@@ -120,7 +121,7 @@ class Dataloader(pl.LightningDataModule):
 
         if swap:  # swap 적용시 양방향 될 수 있도록
             for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
-                text = "[SEP]".join([item[text_column] for text_column in self.text_columns[::-1]])
+                text = sep_token.join([item[text_column] for text_column in self.text_columns[::-1]])
 
                 if self.use_preprocessing:
                     text = utils.text_preprocessing(text)  # 전처리 추가
@@ -276,9 +277,10 @@ class KfoldDataloader(pl.LightningDataModule):
 
     def tokenizing(self, dataframe, swap):
         data = []
+        sep_token = self.tokenizer.special_tokens_map["sep_token"]
         print("ToKenizer info: \n", self.tokenizer)
         for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
-            text = "[SEP]".join([item[text_column] for text_column in self.text_columns])
+            text = sep_token.join([item[text_column] for text_column in self.text_columns])
             if self.use_preprocessing:
                 text = utils.text_preprocessing(text)  # 전처리 추가
             outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
@@ -286,7 +288,7 @@ class KfoldDataloader(pl.LightningDataModule):
 
         if swap:  # swap 적용시 양방향 될 수 있도록
             for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
-                text = "[SEP]".join([item[text_column] for text_column in self.text_columns[::-1]])
+                text = sep_token.join([item[text_column] for text_column in self.text_columns[::-1]])
                 if self.use_preprocessing:
                     text = utils.text_preprocessing(text)  # 전처리 추가
                 outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
