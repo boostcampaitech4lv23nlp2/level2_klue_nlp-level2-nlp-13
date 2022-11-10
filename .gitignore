@@ -197,3 +197,5 @@ output_n.csv
 README.md
 
 save_models/
+config/config*
+outputs/
