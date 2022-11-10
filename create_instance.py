@@ -41,7 +41,6 @@ def load_model(args, conf, dataloader: Dataloader, model):  # continue_train과 
 
     # huggingface에 저장된 모델명을 parsing함
     # ex) 'klue/roberta-small'
-
     model_name = "/".join(args.saved_model.split("/")[1:-1]).split("_")[0]
 
     if args.saved_model.split(".")[-1] == "ckpt":
