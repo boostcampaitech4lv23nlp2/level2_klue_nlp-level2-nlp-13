@@ -45,40 +45,41 @@ class Model(pl.LightningModule):
                 param.requires_grad = True
 
     def forward(self, x):
-        x = self.plm(x)["logits"]
+        input_ids, attention_mask, token_type_ids = x
+        x = self.plm(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)["logits"]
 
         return x
 
     def training_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self(x)
-        loss = self.loss_func(logits, y.float())
+        input_ids, attention_mask, token_type_ids, labels = batch
+        logits = self(input_ids, attention_mask, token_type_ids, labels)
+        loss = self.loss_func(logits, labels.float())
         self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self(x)
-        loss = self.loss_func(logits, y.float())
+        input_ids, attention_mask, token_type_ids, labels = batch
+        logits = self(input_ids, attention_mask, token_type_ids, labels)
+        loss = self.loss_func(logits, labels.float())
         self.log("val_loss", loss)
         self.log(
             "val_pearson",
-            torchmetrics.functional.pearson_corrcoef(logits.squeeze(), y.squeeze()),
+            torchmetrics.functional.pearson_corrcoef(logits.squeeze(), labels.squeeze()),
         )
 
         return loss
 
     def test_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self(x)
+        input_ids, attention_mask, token_type_ids, labels = batch
+        logits = self(input_ids, attention_mask, token_type_ids, labels)
         self.log(
             "test_pearson",
-            torchmetrics.functional.pearson_corrcoef(logits.squeeze(), y.squeeze()),
+            torchmetrics.functional.pearson_corrcoef(logits.squeeze(), labels.squeeze()),
         )
 
     def predict_step(self, batch, batch_idx):
-        x = batch
-        logits = self(x)
+        input_ids, attention_mask, token_type_ids, labels = batch
+        logits = self(input_ids, attention_mask, token_type_ids, labels)
 
         return logits.squeeze()
 
