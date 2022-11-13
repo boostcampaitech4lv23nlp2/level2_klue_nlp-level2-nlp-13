@@ -9,7 +9,6 @@ import wandb
 from data_loader.data_loaders import Dataloader, KfoldDataloader
 
 
-# train.train(conf)
 def train(args, conf):
     project_name = conf.wandb.project
     dataloader, model = create_instance.new_instance(conf)  # 함수화로 변경

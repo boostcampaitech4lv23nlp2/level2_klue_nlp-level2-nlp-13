@@ -13,9 +13,11 @@ import train
 # fix random seeds for reproducibility
 
 if __name__ == "__main__":
-    # 하이퍼 파라미터 등 각종 설정값을 입력받습니다
-    # 터미널 실행 예시 : python3 run.py --batch_size=64 ...
-    # 실행 시 '--batch_size=64' 같은 인자를 입력하지 않으면 default 값이 기본으로 실행됩니다
+    '''
+    하이퍼 파라미터 등 각종 설정값을 입력받습니다
+    터미널 실행 예시 : python3 run.py --batch_size=64 ...
+    실행 시 '--batch_size=64' 같은 인자를 입력하지 않으면 default 값이 기본으로 실행됩니다
+    '''
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--config", "-c", type=str, default="base_config")
@@ -39,7 +41,6 @@ if __name__ == "__main__":
     torch.use_deterministic_algorithms(True)
 
     if args.mode == "train" or args.mode == "t":
-        # num_folds 변수 확인
         if conf.k_fold.use_k_fold:
             train.k_train(args, conf)
 

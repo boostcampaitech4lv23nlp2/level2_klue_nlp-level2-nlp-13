@@ -19,7 +19,7 @@ def inference(args, conf):
     )
     trainer = pl.Trainer(gpus=1, max_epochs=conf.train.max_epoch, log_every_n_steps=1)
 
-    model, _, __ = train.load_model(args, conf, dataloader)  # train.py에 저장된 모델을 불러오는 메서드 따로 작성함
+    model, _, __ = train.load_model(args, conf, dataloader)
 
     model.eval()
 
@@ -29,9 +29,9 @@ def inference(args, conf):
     )
     trainer.test(model=model, datamodule=dataloader)
 
-    predictions = list(float(i) for i in torch.cat(predictions))  # 리스트화
-    predictions_b = list(round(float(i), 1) for i in predictions)  # 반올림
-    predictions_n = [round(5 * x / (max(predictions) - min(predictions) + 1e-8), 1) for x in predictions]  # 정규화
+    predictions = list(float(i) for i in torch.cat(predictions))
+    predictions_b = list(round(float(i), 1) for i in predictions)
+    predictions_n = [round(5 * x / (max(predictions) - min(predictions) + 1e-8), 1) for x in predictions]
 
     output = pd.read_csv("../data/sample_submission.csv")
     output_b = pd.read_csv("../data/sample_submission.csv")

@@ -54,7 +54,6 @@ class Dataloader(pl.LightningDataModule):
         self.test_dataset = None
         self.predict_dataset = None
 
-        ## 손으로 수정하는 부분 좀 줄일 수 있게끔 수정
         model_list = {
             "bert": [
                 "klue/roberta-small",
@@ -102,7 +101,7 @@ class Dataloader(pl.LightningDataModule):
                 "<PERSON>",
             ]
 
-        self.new_token_count = self.tokenizer.add_tokens(self.add_token)  # 새롭게 추가된 토큰의 수 저장
+        self.new_token_count = self.tokenizer.add_tokens(self.add_token)
         self.swap = use_swap
 
         self.target_columns = ["label"]
@@ -115,23 +114,23 @@ class Dataloader(pl.LightningDataModule):
         for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
             text = sep_token.join([item[text_column] for text_column in self.text_columns])
             if self.use_preprocessing:
-                text = utils.text_preprocessing(text)  # 전처리 추가
+                text = utils.text_preprocessing(text)
             outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
             data.append(outputs["input_ids"])
 
-        if swap:  # swap 적용시 양방향 될 수 있도록
+        if swap:
             for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
                 text = sep_token.join([item[text_column] for text_column in self.text_columns[::-1]])
 
                 if self.use_preprocessing:
-                    text = utils.text_preprocessing(text)  # 전처리 추가
+                    text = utils.text_preprocessing(text)
                 outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
                 data.append(outputs["input_ids"])
 
         return data
 
     def preprocessing(self, data, swap):
-        data = data.drop(columns=self.delete_columns)  # id column 삭제
+        data = data.drop(columns=self.delete_columns)
 
         try:
             if swap:
@@ -148,7 +147,7 @@ class Dataloader(pl.LightningDataModule):
         if stage == "fit":
             total_data = pd.read_csv(self.train_path)
 
-            split = StratifiedShuffleSplit(n_splits=1, test_size=1 - self.train_ratio, random_state=1004)  # 층화 추출 fix
+            split = StratifiedShuffleSplit(n_splits=1, test_size=1 - self.train_ratio, random_state=1004)
             for train_idx, val_idx in split.split(total_data, total_data["binary-label"]):
                 train_data = total_data.loc[train_idx]
                 val_data = total_data.loc[val_idx]
@@ -222,7 +221,6 @@ class KfoldDataloader(pl.LightningDataModule):
         self.test_dataset = None
         self.predict_dataset = None
 
-        ## 손으로 수정하는 부분 좀 줄일 수 있게끔 수정
         model_list = {
             "bert": [
                 "klue/roberta-small",
@@ -268,7 +266,7 @@ class KfoldDataloader(pl.LightningDataModule):
                 "<PERSON>",
             ]
 
-        self.new_token_count = self.tokenizer.add_tokens(self.add_token)  # 새롭게 추가된 토큰의 수 저장
+        self.new_token_count = self.tokenizer.add_tokens(self.add_token)
         self.swap = use_swap
 
         self.target_columns = ["label"]
@@ -282,15 +280,15 @@ class KfoldDataloader(pl.LightningDataModule):
         for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
             text = sep_token.join([item[text_column] for text_column in self.text_columns])
             if self.use_preprocessing:
-                text = utils.text_preprocessing(text)  # 전처리 추가
+                text = utils.text_preprocessing(text)
             outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
             data.append(outputs["input_ids"])
 
-        if swap:  # swap 적용시 양방향 될 수 있도록
+        if swap:
             for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
                 text = sep_token.join([item[text_column] for text_column in self.text_columns[::-1]])
                 if self.use_preprocessing:
-                    text = utils.text_preprocessing(text)  # 전처리 추가
+                    text = utils.text_preprocessing(text)
                 outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
                 data.append(outputs["input_ids"])
 

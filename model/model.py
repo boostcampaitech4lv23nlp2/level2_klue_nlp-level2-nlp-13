@@ -16,7 +16,7 @@ class Model(pl.LightningModule):
         loss,
         new_vocab_size,
         use_freeze,
-    ):  # 새로운 vocab 사이즈 설정
+    ):
         super().__init__()
         self.save_hyperparameters()
 
@@ -30,10 +30,10 @@ class Model(pl.LightningModule):
 
         if use_freeze == True:
             self.freeze()
-        self.plm.resize_token_embeddings(new_vocab_size)  # 임베딩 차원 재조정
+        self.plm.resize_token_embeddings(new_vocab_size)
         self.loss_func = loss_module.loss_config[loss]
 
-    def freeze(self):  # 추후 레이어를 반복하면서 얼리고 풀고 할 수 있게 훈련
+    def freeze(self):
         for name, param in self.plm.named_parameters():
             param.requires_grad = False
             if name in [
@@ -103,11 +103,11 @@ class Klue_CustomModel(pl.LightningModule):
         self.model_name = model_name
         self.lr = lr
         self.classifier_input = 1024
-        self.plm = transformers.AutoModelForSequenceClassification.from_pretrained(  # 기존 모델
+        self.plm = transformers.AutoModelForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path=model_name,
             num_labels=self.classifier_input,
         )
-        self.plm.resize_token_embeddings(new_vocab_size)  # 임베딩 차원 재조정
+        self.plm.resize_token_embeddings(new_vocab_size)
 
         self.loss_func = loss_module.loss_config[loss]
 
@@ -119,10 +119,10 @@ class Klue_CustomModel(pl.LightningModule):
 
         if use_freeze == True:
             self.freeze()
-        self.plm.resize_token_embeddings(new_vocab_size)  # 임베딩 차원 재조정
+        self.plm.resize_token_embeddings(new_vocab_size)
         self.loss_func = loss_module.loss_config[loss]
 
-    def freeze(self):  # 추후 레이어를 반복하면서 얼리고 풀고 할 수 있게 훈련
+    def freeze(self):
         for name, param in self.plm.named_parameters():
             param.requires_grad = False
             if name in [
@@ -177,7 +177,7 @@ class Klue_CustomModel(pl.LightningModule):
         return optimizer
 
 
-class Funnel_CustomModel(pl.LightningModule):  # 스케줄러 사용
+class Funnel_CustomModel(pl.LightningModule):
     def __init__(
         self,
         model_name,
@@ -190,14 +190,14 @@ class Funnel_CustomModel(pl.LightningModule):  # 스케줄러 사용
         self.save_hyperparameters()
         self.model_name = model_name
         self.lr = lr
-        self.plm = transformers.FunnelModel.from_pretrained(  # 기존 모델
+        self.plm = transformers.FunnelModel.from_pretrained(
             pretrained_model_name_or_path=model_name,
         )
         self.input_dim = transformers.FunnelConfig.from_pretrained(
             self.model_name,
-        ).d_model  # 히든 벡터 차원
+        ).d_model
 
-        self.plm.resize_token_embeddings(new_vocab_size)  # 임베딩 차원 재조정
+        self.plm.resize_token_embeddings(new_vocab_size)
 
         self.loss_func = loss_module.loss_config[loss]
 
@@ -210,10 +210,10 @@ class Funnel_CustomModel(pl.LightningModule):  # 스케줄러 사용
 
         if use_freeze == True:
             self.freeze()
-        self.plm.resize_token_embeddings(new_vocab_size)  # 임베딩 차원 재조정
+        self.plm.resize_token_embeddings(new_vocab_size)
         self.loss_func = loss_module.loss_config[loss]
 
-    def freeze(self):  # 추후 레이어를 반복하면서 얼리고 풀고 할 수 있게 훈련
+    def freeze(self):
         for name, param in self.plm.named_parameters():
             param.requires_grad = False
             if name in [
@@ -265,7 +265,7 @@ class Funnel_CustomModel(pl.LightningModule):  # 스케줄러 사용
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
-        scheduler = ExponentialLR(optimizer, gamma=0.95)  # 지수적으로 감소하게 해둠
+        scheduler = ExponentialLR(optimizer, gamma=0.95)
         return [optimizer], [scheduler]
 
 
@@ -277,7 +277,7 @@ class Xlm_CustomModel(pl.LightningModule):
         loss,
         new_vocab_size,
         use_freeze,
-    ):  # 새로운 vocab 사이즈 설정
+    ):
         super().__init__()
         self.save_hyperparameters()
 
@@ -291,10 +291,10 @@ class Xlm_CustomModel(pl.LightningModule):
 
         if use_freeze == True:
             self.freeze()
-        self.plm.resize_token_embeddings(new_vocab_size)  # 임베딩 차원 재조정
+        self.plm.resize_token_embeddings(new_vocab_size)
         self.loss_func = loss_module.loss_config[loss]
 
-    def freeze(self):  # 추후 레이어를 반복하면서 얼리고 풀고 할 수 있게 훈련
+    def freeze(self):
         for name, param in self.plm.named_parameters():
             param.requires_grad = False
             if name in [
@@ -346,13 +346,12 @@ class Xlm_CustomModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
         scheduler = StepLR(optimizer, step_size=30, gamma=0.5)
-        # scheduler = LambdaLR(optimizer, lr_lambda=triangle_func)
         return [optimizer], [scheduler]
 
 
 # def triangle_func(epoch):
-#     max_lr_epoch = 50  # 삼각형의 꼭짓점
-#     grad = 1 / max_lr_epoch  # 기울기
+#     max_lr_epoch = 50
+#     grad = 1 / max_lr_epoch
 #     if max_lr_epoch > epoch:
 #         return grad * epoch
 #     else:
