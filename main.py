@@ -10,8 +10,6 @@ from omegaconf import OmegaConf
 import inference
 import train
 
-# fix random seeds for reproducibility
-
 if __name__ == "__main__":
     '''
     하이퍼 파라미터 등 각종 설정값을 입력받습니다
