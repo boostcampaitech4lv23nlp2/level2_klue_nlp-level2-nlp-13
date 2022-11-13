@@ -15,7 +15,31 @@
 우리는 STS 데이터셋을 활용해 두 문장의 유사도를 측정하는 AI모델을 구축할 것입니다. 유사도 점수와 함께 두 문장의 유사함을 참과 거짓으로 판단하는 참고 정보도 같이 제공하지만, 최종적으로 0과 5사이의 유사도 점수를 예측하는 것을 목적으로 합니다!
 
 ---
-
+# Project Tree
+```
+level1_semantictextsimilarity_nlp-level1-nlp-08
+├── README.md
+├── config
+│   ├── base_config.yaml
+│   ├── funnel_ensemble.yaml
+│   ├── klue_ensemble.yaml
+│   ├── xlm_5fold_ensemble.yaml
+│   └── xlm_ensemble.yaml
+├── create_instance.py
+├── data_loader
+│   └── data_loaders.py
+├── final_submit.py
+├── inference.py
+├── main.py
+├── model
+│   ├── loss.py
+│   └── model.py
+├── requirements.txt
+├── train.py
+└── utils
+    └── utils.py
+```
+---
 ## 데이터
 
 ### 평가 데이터의 50%는 Public 점수 계산에 활용되어 실시간 리더보드에 표기가 되고, 남은 50%는 Private 결과 계산에 활용되어 대회 종료 후 평가됩니다.
