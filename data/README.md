@@ -1,5 +1,5 @@
 
-중복 데이터 제거 및 train valid set으로 분리
+중복 데이터 제거 및 stratified하게 train valid set으로 분리
 
 ```
 python data/utils/preprocess.py
@@ -15,3 +15,5 @@ python data/utils/preprocess.py
 ├─📁utils
 └─README.md
 ```
+
+![image](/assets/split_stratified.png)
