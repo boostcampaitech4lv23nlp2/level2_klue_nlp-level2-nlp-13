@@ -14,7 +14,7 @@ from transformers import (
 )
 import wandb
 
-from dataloader.dataset import load_train_dev_data, RE_Dataset
+from dataloader.dataset import load_train_dev_data, RE_Dataset, RE_Collator
 from trainer.metrics import compute_metrics
 
 
@@ -36,12 +36,14 @@ def main(config):
     print("\033[38;2;31;169;250m" + "get dataset" + "\033[0m")
     tokenizer = AutoTokenizer.from_pretrained(config.model.name)
     tokenized_train, train_label = load_train_dev_data(
-        config.path.train_path, tokenizer
+        config.path.train_path
     )
-    tokenized_dev, dev_label = load_train_dev_data(config.path.dev_path, tokenizer)
+    tokenized_dev, dev_label = load_train_dev_data(config.path.dev_path)
 
     RE_train_dataset = RE_Dataset(tokenized_train, train_label)
     RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
+
+    RE_collator = RE_Collator(tokenizer)
 
     print("\033[38;2;31;169;250m" + "get model" + "\033[0m")
     model_config = AutoConfig.from_pretrained(config.model.name)
@@ -86,6 +88,7 @@ def main(config):
         train_dataset=RE_train_dataset,
         eval_dataset=RE_dev_dataset,
         compute_metrics=compute_metrics,
+        data_collator=RE_collator
     )
 
     print("\033[38;2;31;169;250m" + "Training start" + "\033[0m")

@@ -7,16 +7,16 @@ import torch
 class RE_Dataset(torch.utils.data.Dataset):
     """Dataset 구성을 위한 class."""
 
-    def __init__(self, pair_dataset, labels):
-        self.pair_dataset = pair_dataset
+    def __init__(self, dataset, labels):
+        self.dataset = dataset
         self.labels = labels
-
+        
     def __getitem__(self, idx):
-        item = {
-            key: val[idx].clone().detach() for key, val in self.pair_dataset.items()
-        }
-        item["labels"] = torch.tensor(self.labels[idx])
-        return item
+        sentence = self.dataset['sentence'][idx]
+        subject_entity = self.dataset['subject_entity'][idx]
+        object_entity = self.dataset['object_entity'][idx]
+        label = self.labels[idx]
+        return sentence, subject_entity, object_entity, label
 
     def __len__(self):
         return len(self.labels)
@@ -81,16 +81,16 @@ def num_to_label(label):
     return origin_label
 
 
-def tokenized_dataset(dataset, tokenizer):
+def tokenized_dataset(sentences, tokenizer, subject_entities, object_entities):
     """tokenizer에 따라 sentence를 tokenizing 합니다."""
     concat_entity = [
         e01 + "[SEP]" + e02
-        for e01, e02 in zip(dataset["subject_entity"], dataset["object_entity"])
+        for e01, e02 in zip(subject_entities, object_entities)
     ]
 
     tokenized_sentences = tokenizer(
         concat_entity,
-        list(dataset["sentence"]),
+        sentences,
         return_tensors="pt",
         padding=True,
         truncation=True,
@@ -101,17 +101,33 @@ def tokenized_dataset(dataset, tokenizer):
     return tokenized_sentences
 
 
-def load_train_dev_data(dataset_dir, tokenizer):
+def load_train_dev_data(dataset_dir):
     data = load_data(dataset_dir)
     label = label_to_num(data["label"].values)
 
-    tokenized_data = tokenized_dataset(data, tokenizer)
-    return tokenized_data, label
+    return data, label
 
 
-def load_test_data(dataset_dir, tokenizer):
+def load_test_data(dataset_dir):
     test_data = load_data(dataset_dir)
     test_label = list(map(int, test_data["label"].values))
 
-    tokenized_test_data = tokenized_dataset(test_data, tokenizer)
-    return test_data["id"], tokenized_test_data, test_label
+    return test_data["id"], test_data, test_label
+
+class RE_Collator(object):
+    '''
+    tokenization을 적용, label을 tensor로 바꿔주는 data collator.
+    '''
+    def __init__(self, tokenizer):
+        self.tokenizer = tokenizer
+
+    def __call__(self, batch):
+        sentences, subject_entities, object_entities, labels = zip(*batch)
+
+        # tokenization
+        tokenized_dict = tokenized_dataset(sentences, self.tokenizer, subject_entities, object_entities)
+        
+        item = {key: val for key, val in tokenized_dict.items()}
+        item['labels'] = torch.tensor(labels)
+        return item
+        
