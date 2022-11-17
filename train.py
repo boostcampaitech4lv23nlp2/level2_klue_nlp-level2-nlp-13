@@ -72,6 +72,8 @@ def main(config):
         load_best_model_at_end=config.train.load_best_model_at_end,
         report_to="wandb",
         run_name=f"{config.wandb.name}_{config.wandb.info}",
+        fp16=True,
+        fp16_opt_level='01',
     )
 
     wandb.init(
