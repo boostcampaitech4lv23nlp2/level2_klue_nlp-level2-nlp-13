@@ -11,6 +11,7 @@ from transformers import (
     AutoModelForSequenceClassification,
     Trainer,
     TrainingArguments,
+    EarlyStoppingCallback,
 )
 import wandb
 
@@ -86,6 +87,11 @@ def main(config):
         train_dataset=RE_train_dataset,
         eval_dataset=RE_dev_dataset,
         compute_metrics=compute_metrics,
+        callbacks=[
+            EarlyStoppingCallback(
+                early_stopping_patience=config.train.early_stopping_patience
+            )
+        ],
     )
 
     print("\033[38;2;31;169;250m" + "Training start" + "\033[0m")
