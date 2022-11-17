@@ -1,21 +1,20 @@
 import argparse
 import random
 
+import inference
 import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
+import train
 from omegaconf import OmegaConf
 
-import inference
-import train
-
 if __name__ == "__main__":
-    '''
+    """
     하이퍼 파라미터 등 각종 설정값을 입력받습니다
     터미널 실행 예시 : python3 run.py --batch_size=64 ...
     실행 시 '--batch_size=64' 같은 인자를 입력하지 않으면 default 값이 기본으로 실행됩니다
-    '''
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--config", "-c", type=str, default="base_config")
