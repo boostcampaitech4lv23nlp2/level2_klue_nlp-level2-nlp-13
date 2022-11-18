@@ -16,7 +16,9 @@ from transformers import (
 import wandb
 
 from dataloader.dataset import load_train_dev_data, RE_Dataset
+from trainer.trainer import CustomTrainer
 from trainer.metrics import compute_metrics
+from trainer.optimizer import get_optimizer, get_scheduler
 
 
 def seed_everything(seed):
@@ -55,6 +57,10 @@ def main(config):
     model.to(device)
 
     print("\033[38;2;31;169;250m" + "get trainer" + "\033[0m")
+    optimizer = get_optimizer(model, config)
+    scheduler = get_scheduler(optimizer, config)
+    optimizers = (optimizer, scheduler)
+
     training_args = TrainingArguments(
         output_dir=config.train.checkpoints_dir,
         save_total_limit=config.train.save_total_limits,
@@ -81,12 +87,14 @@ def main(config):
     )
     wandb.config.update(training_args)
 
-    trainer = Trainer(
+    trainer = CustomTrainer(
+        config=config,
         model=model,
         args=training_args,
         train_dataset=RE_train_dataset,
         eval_dataset=RE_dev_dataset,
         compute_metrics=compute_metrics,
+        # optimizers=optimizers, # FIX: valid 학습이 안됨 어디가 잘못되었는지 확인필요
         callbacks=[
             EarlyStoppingCallback(
                 early_stopping_patience=config.train.early_stopping_patience
