@@ -37,6 +37,7 @@ def text_preprocessing(sentence):
 monitor_config = {
     "val_loss": {"monitor": "val_loss", "mode": "min"},
     "val_pearson": {"monitor": "val_pearson", "mode": "max"},
+    "val_f1": {"monitor": "val_f1", "mode": "max"},
 }
 
 

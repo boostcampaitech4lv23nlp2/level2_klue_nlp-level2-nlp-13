@@ -198,4 +198,7 @@ README.md
 
 save_models/
 config/config*
+config/*
 outputs/
+
+data/*

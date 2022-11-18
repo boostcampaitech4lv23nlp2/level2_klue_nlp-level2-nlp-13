@@ -1,4 +1,5 @@
 import os
+import pickle
 import re
 
 import pandas as pd
@@ -7,23 +8,26 @@ import torch
 import transformers
 from sklearn.model_selection import KFold, StratifiedShuffleSplit
 from tqdm.auto import tqdm
-
 from utils import utils
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, inputs, targets=[]):
-        self.inputs = inputs
-        self.targets = targets
+    """Dataset 구성을 위한 class."""
+
+    def __init__(self, pair_dataset, labels):
+        self.pair_dataset = pair_dataset
+        self.labels = labels
 
     def __getitem__(self, idx):
-        if len(self.targets) == 0:
-            return torch.tensor(self.inputs[idx])
+        if len(self.labels) == 0:
+            item = [val[idx].clone().detach() for _, val in self.pair_dataset.items()]
         else:
-            return torch.tensor(self.inputs[idx]), torch.tensor(self.targets[idx])
+            item = [val[idx].clone().detach() for _, val in self.pair_dataset.items()]
+            item.append(self.labels[idx])
+        return item
 
     def __len__(self):
-        return len(self.inputs)
+        return len(self.labels)
 
 
 class Dataloader(pl.LightningDataModule):
@@ -84,7 +88,7 @@ class Dataloader(pl.LightningDataModule):
         else:
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_name)
 
-        self.tokenizer.model_max_length = 128
+        self.tokenizer.model_max_length = 256
         self.use_preprocessing = use_preprocessing
         if self.use_preprocessing:
             self.add_token = [
@@ -96,50 +100,49 @@ class Dataloader(pl.LightningDataModule):
                 "ㅋㅋㅋ",
                 "ㄷㄷㄷ",
             ]
+            self.new_token_count = self.tokenizer.add_tokens(self.add_token)
         else:
-            self.add_token = [
-                "<PERSON>",
-            ]
-
-        self.new_token_count = self.tokenizer.add_tokens(self.add_token)
+            self.new_token_count = 0
         self.swap = use_swap
 
         self.target_columns = ["label"]
         self.delete_columns = ["id"]
-        self.text_columns = ["sentence_1", "sentence_2"]
+        self.text_columns = ["sentence", "subject_entity", "object_entity"]
 
-    def tokenizing(self, dataframe, swap):
+    def tokenizing(self, df):
         data = []
         sep_token = self.tokenizer.special_tokens_map["sep_token"]
-        for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
-            text = sep_token.join([item[text_column] for text_column in self.text_columns])
-            if self.use_preprocessing:
-                text = utils.text_preprocessing(text)
-            outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
-            data.append(outputs["input_ids"])
 
-        if swap:
-            for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
-                text = sep_token.join([item[text_column] for text_column in self.text_columns[::-1]])
+        """tokenizer에 따라 sentence를 tokenizing 합니다."""
+        concat_entity = [e01 + sep_token + e02 for e01, e02 in zip(df["subject_entity"], df["object_entity"])]
 
-                if self.use_preprocessing:
-                    text = utils.text_preprocessing(text)
-                outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
-                data.append(outputs["input_ids"])
+        text = list(df["sentence"])
+        if self.use_preprocessing:
+            text = utils.text_preprocessing(text)
+
+        data = self.tokenizer(
+            concat_entity,
+            text,
+            add_special_tokens=True,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
+        )
 
         return data
 
-    def preprocessing(self, data, swap):
-        data = data.drop(columns=self.delete_columns)
+    def preprocessing(self, df):
+        df = df.drop(columns=self.delete_columns)
 
         try:
-            if swap:
-                targets = data[self.target_columns].values.tolist() + data[self.target_columns].values.tolist()
+            if df["label"].iloc[0] == 100:  # test_data인 경우
+                targets = []
             else:
-                targets = data[self.target_columns].values.tolist()
+                targets = df["label"].values.tolist()
         except:
             targets = []
-        inputs = self.tokenizing(data, swap)
+        inputs = self.tokenizing(df)
+        targets = self.label_to_num(targets)
 
         return inputs, targets
 
@@ -148,17 +151,17 @@ class Dataloader(pl.LightningDataModule):
             total_data = pd.read_csv(self.train_path)
 
             split = StratifiedShuffleSplit(n_splits=1, test_size=1 - self.train_ratio, random_state=1004)
-            for train_idx, val_idx in split.split(total_data, total_data["binary-label"]):
+            for train_idx, val_idx in split.split(total_data, total_data["label"]):
                 train_data = total_data.loc[train_idx]
                 val_data = total_data.loc[val_idx]
 
             # train_data = total_data.sample(frac=self.train_ratio)
             # val_data = total_data.drop(train_data.index)
 
-            train_inputs, train_targets = self.preprocessing(train_data, self.swap)
-            val_inputs, val_targets = self.preprocessing(val_data, self.swap)
-            print("train data len : ", len(train_inputs))
-            print("valid data len : ", len(val_inputs))
+            train_inputs, train_targets = self.preprocessing(train_data)
+            val_inputs, val_targets = self.preprocessing(val_data)
+            print("train data len : ", len(train_inputs["input_ids"]))
+            print("valid data len : ", len(val_inputs["input_ids"]))
 
             self.train_dataset = Dataset(train_inputs, train_targets)
             self.val_dataset = Dataset(val_inputs, val_targets)
@@ -167,8 +170,8 @@ class Dataloader(pl.LightningDataModule):
             test_data = pd.read_csv(self.test_path)
             predict_data = pd.read_csv(self.predict_path)
 
-            test_inputs, test_targets = self.preprocessing(test_data, False)
-            predict_inputs, predict_targets = self.preprocessing(predict_data, False)
+            test_inputs, test_targets = self.preprocessing(test_data)
+            predict_inputs, predict_targets = self.preprocessing(predict_data)
 
             self.test_dataset = Dataset(test_inputs, test_targets)
             self.predict_dataset = Dataset(predict_inputs, predict_targets)
@@ -187,6 +190,22 @@ class Dataloader(pl.LightningDataModule):
 
     def new_vocab_size(self):
         return self.new_token_count + self.tokenizer.vocab_size
+
+    def label_to_num(self, label):
+        with open("./data/dict_label_to_num.pkl", "rb") as f:
+            dict_label_to_num = pickle.load(f)
+
+        try:
+            num_label = [dict_label_to_num[v] for v in label]
+        except:
+            print("invalid label", label)
+        return num_label
+
+    def num_to_label(self, label):
+        with open("./data/dict_num_to_label.pkl", "rb") as f:
+            dict_num_to_label = pickle.load(f)
+        origin_label = [dict_num_to_label[v] for v in label]
+        return origin_label
 
 
 class KfoldDataloader(pl.LightningDataModule):

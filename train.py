@@ -1,12 +1,11 @@
-import pytorch_lightning as pl
-import torch
-from pytorch_lightning.loggers import WandbLogger
-
 import create_instance
 import model.model as module_arch
+import pytorch_lightning as pl
+import torch
 import utils.utils as utils
 import wandb
 from data_loader.data_loaders import Dataloader, KfoldDataloader
+from pytorch_lightning.loggers import WandbLogger
 
 
 def train(args, conf):
@@ -32,7 +31,7 @@ def train(args, conf):
                 top_k=conf.utils.top_k,
                 monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
                 mode=utils.monitor_config[conf.utils.monitor]["mode"],
-                filename="{epoch}-{step}-{val_pearson}-{val_loss}",
+                filename="{epoch}-{step}-{val_loss}",
             ),
         ],
     )
@@ -42,6 +41,8 @@ def train(args, conf):
     wandb.finish()
 
     trainer.save_checkpoint(save_path + "model.ckpt")
+    model.plm.save_pretrained(save_path)
+    model.plm.push_to_hub()
     # torch.save(model, save_path + "model.pt")
 
 
@@ -68,7 +69,7 @@ def continue_train(args, conf):
                 top_k=conf.utils.top_k,
                 monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
                 mode=utils.monitor_config[conf.utils.monitor]["mode"],
-                filename="{epoch}-{step}-{val_pearson}-{val_loss}",
+                filename="{epoch}-{step}-{val_loss}",
             ),
         ],
     )
@@ -136,7 +137,7 @@ def k_train(args, conf):
                     top_k=conf.utils.top_k,
                     monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
                     mode=utils.monitor_config[conf.utils.monitor]["mode"],
-                    filename="{epoch}-{step}-{val_pearson}-{val_loss}",
+                    filename="{epoch}-{step}-{val_loss}",
                 ),
             ],
         )
@@ -199,7 +200,7 @@ def sweep(args, conf, exp_count):
                     top_k=conf.utils.top_k,
                     monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
                     mode=utils.monitor_config[conf.utils.monitor]["mode"],
-                    filename="{epoch}-{step}-{val_pearson}-{val_loss}",
+                    filename="{epoch}-{step}-{val_loss}",
                 ),
             ],
         )

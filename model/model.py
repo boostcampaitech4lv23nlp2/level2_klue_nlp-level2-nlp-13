@@ -22,11 +22,11 @@ class Model(pl.LightningModule):
 
         self.model_name = model_name
         self.lr = lr
-
         self.plm = transformers.AutoModelForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path=model_name,
-            num_labels=1,
+            num_labels=30,
         )
+        # print(self.plm.parameters)
 
         if use_freeze == True:
             self.freeze()
@@ -45,41 +45,37 @@ class Model(pl.LightningModule):
                 param.requires_grad = True
 
     def forward(self, x):
-        input_ids, attention_mask, token_type_ids = x
-        x = self.plm(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)["logits"]
+        input_ids, token_type_ids, attention_mask = x
+        x = self.plm(input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)["logits"]
 
         return x
 
     def training_step(self, batch, batch_idx):
-        input_ids, attention_mask, token_type_ids, labels = batch
-        logits = self(input_ids, attention_mask, token_type_ids, labels)
-        loss = self.loss_func(logits, labels.float())
+        input_ids, token_type_ids, attention_mask, labels = batch
+        logits = self((input_ids, token_type_ids, attention_mask))
+        loss = self.loss_func(logits, labels.long())  # cross entropy를 쓸 때는 long type으로 바꿔줘야함
         self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        input_ids, attention_mask, token_type_ids, labels = batch
-        logits = self(input_ids, attention_mask, token_type_ids, labels)
-        loss = self.loss_func(logits, labels.float())
+        input_ids, token_type_ids, attention_mask, labels = batch
+        logits = self((input_ids, token_type_ids, attention_mask))
+        loss = self.loss_func(logits, labels.long())  # cross entropy를 쓸 때는 long type으로 바꿔줘야함
         self.log("val_loss", loss)
-        self.log(
-            "val_pearson",
-            torchmetrics.functional.pearson_corrcoef(logits.squeeze(), labels.squeeze()),
-        )
+        # self.log("val_f1", torchmetrics.F1Score(num_classes=30, average="micro")(logits.squeeze(), labels.squeeze()))
+        self.log("val_f1", loss_module.klue_re_micro_f1(logits.squeeze(), labels.squeeze()))
 
         return loss
 
     def test_step(self, batch, batch_idx):
-        input_ids, attention_mask, token_type_ids, labels = batch
-        logits = self(input_ids, attention_mask, token_type_ids, labels)
-        self.log(
-            "test_pearson",
-            torchmetrics.functional.pearson_corrcoef(logits.squeeze(), labels.squeeze()),
-        )
+        input_ids, token_type_ids, attention_mask, labels = batch
+        logits = self((input_ids, token_type_ids, attention_mask))
+        # self.log("test_f1", torchmetrics.F1Score(num_classes=30, average="micro")(logits.squeeze(), labels.squeeze()))
+        self.log("test_f1", loss_module.klue_re_micro_f1(logits.squeeze(), labels.squeeze()))
 
     def predict_step(self, batch, batch_idx):
-        input_ids, attention_mask, token_type_ids, labels = batch
-        logits = self(input_ids, attention_mask, token_type_ids, labels)
+        input_ids, token_type_ids, attention_mask, labels = batch
+        logits = self((input_ids, token_type_ids, attention_mask))
 
         return logits.squeeze()
 
