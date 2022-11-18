@@ -42,7 +42,6 @@ def train(args, conf):
 
     trainer.save_checkpoint(save_path + "model.ckpt")
     model.plm.save_pretrained(save_path)
-    model.plm.push_to_hub()
     # torch.save(model, save_path + "model.pt")
 
 
