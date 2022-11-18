@@ -135,14 +135,7 @@ class Dataloader(pl.LightningDataModule):
     def preprocessing(self, df):
         df = df.drop(columns=self.delete_columns)
 
-        """기존 subject_entity와 subject entity를 word값으로만 대체
-
-        Args:
-            dataset (DataFrame): 원본 csv 파일을 읽은 데이터프레임
-
-        Returns:
-            원하는 형태의 DataFrame
-        """
+        """기존 subject_entity와 subject entity를 word값으로만 대체"""
         subject_entity = []
         object_entity = []
 
