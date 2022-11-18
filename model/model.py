@@ -1,3 +1,4 @@
+import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
@@ -32,6 +33,10 @@ class Model(pl.LightningModule):
             self.freeze()
         self.plm.resize_token_embeddings(new_vocab_size)
         self.loss_func = loss_module.loss_config[loss]
+
+        """variables to calculate inference loss"""
+        self.output_pred = []
+        self.output_prob = []
 
     def freeze(self):
         for name, param in self.plm.named_parameters():
@@ -74,10 +79,19 @@ class Model(pl.LightningModule):
         self.log("test_f1", loss_module.klue_re_micro_f1(logits.squeeze(), labels.squeeze()))
 
     def predict_step(self, batch, batch_idx):
-        input_ids, token_type_ids, attention_mask, labels = batch
+        input_ids, token_type_ids, attention_mask = batch
         logits = self((input_ids, token_type_ids, attention_mask))
 
-        return logits.squeeze()
+        probs = []
+        results = []
+        for logit in logits:
+            probs.append(nn.functional.softmax(logit, dim=-1).detach().cpu().numpy())
+            results.append(np.argmax(logit.detach().cpu().numpy(), axis=-1))
+
+        self.output_pred = results
+        self.output_prob = probs
+
+        return (self.output_pred, self.output_prob)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
