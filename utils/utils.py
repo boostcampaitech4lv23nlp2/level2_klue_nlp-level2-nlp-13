@@ -1,3 +1,4 @@
+import pickle
 import re
 
 import pytorch_lightning as pl
@@ -31,6 +32,20 @@ def text_preprocessing(sentence):
     s = re.sub(r"ㅋㅋ+", "ㅋㅋㅋ", s)  # ㅋ두개 이상 -> ㅋㅋㅋ 고정
     s = re.sub(r"ㄷㄷ+", "ㄷㄷㄷ", s)  # ㄷ두개 이상 -> ㄷㄷㄷ 고정
     return s
+
+
+def label_to_num(label):
+    with open("./data/dict_label_to_num.pkl", "rb") as f:
+        dict_label_to_num = pickle.load(f)
+    num_label = [dict_label_to_num[v] for v in label]
+    return num_label
+
+
+def num_to_label(label):
+    with open("./data/dict_num_to_label.pkl", "rb") as f:
+        dict_num_to_label = pickle.load(f)
+    origin_label = [dict_num_to_label[v] for v in label]
+    return origin_label
 
 
 # 모니터링 할 쌍들
