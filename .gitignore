@@ -202,3 +202,4 @@ config/*
 outputs/
 
 data/*
+prediction/
