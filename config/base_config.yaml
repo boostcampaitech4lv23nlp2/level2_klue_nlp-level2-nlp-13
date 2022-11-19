@@ -31,4 +31,7 @@ k_fold:
   num_split: 5
   
 wandb:
-  project: nlp-13-RE
+  team_account_name: next-level-potato # 팀 계정
+  project_repo: RE  # 프로젝트 레포 이름
+  name: kbh # 실험자 명
+  info: baseline_bert-base # 실험명
