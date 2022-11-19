@@ -9,9 +9,13 @@ from pytorch_lightning.loggers import WandbLogger
 
 
 def train(args, conf):
-    project_name = conf.wandb.project
+    wandb.init(
+        entity=conf.wandb.team_account_name,
+        project=conf.wandb.project_repo,
+        name=f'{conf.wandb.name}_{conf.wandb.info}',
+    )
     dataloader, model = create_instance.new_instance(conf)
-    wandb_logger = WandbLogger(project=project_name)
+    wandb_logger = WandbLogger()
 
     save_path = f"{conf.path.save_path}{conf.model.model_name}_maxEpoch{conf.train.max_epoch}_batchSize{conf.train.batch_size}_{wandb_logger.experiment.name}/"
     trainer = pl.Trainer(
