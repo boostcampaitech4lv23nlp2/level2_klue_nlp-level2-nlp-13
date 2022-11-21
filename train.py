@@ -109,7 +109,7 @@ def k_train(args, conf):
             conf.model.model_name,
             conf.train.learning_rate,
             conf.train.loss,
-            k_datamodule.new_vocab_size(),
+            k_datamodule.new_vocab_size,
             conf.train.use_frozen,
         )
 

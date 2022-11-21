@@ -26,7 +26,7 @@ def new_instance(conf, config=None):
         conf.model.model_name,
         learning_rate,
         conf.train.loss,
-        dataloader.new_vocab_size(),
+        dataloader.new_vocab_size,
         conf.train.use_frozen,
     )
 
