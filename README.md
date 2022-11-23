@@ -29,11 +29,24 @@ pip install -r requirements.txt
 
 ### 학습
 ```bash
-python train.py --config=base_config
+python main.py
+python main.py -c "base_config"
+python main.py -m t -c "base_config"
+```
+
+### 추가 학습
+```bash
+python main.py -m ct -s "save_models/klue/bert-base.ckpt"
+python main.py -m ct -s "save_models/klue/bert-base.ckpt" -c "base_config"
 ```
 
 ### inference
 ```bash
 # 실행 시 prediction 폴더에 submission.csv가 생성됨
-python inference.py
+python main.py -m i -s "save_models/klue/bert-base.ckpt"
+python main.py -m i -s "save_models/klue/bert-base.ckpt" -c "base_config"
 ```
+
+### TODO
+[] auprc warning 확인
+[] confusion matrix
