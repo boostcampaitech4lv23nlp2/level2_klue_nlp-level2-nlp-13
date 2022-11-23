@@ -11,6 +11,9 @@ best_model
 # wandb
 wandb
 
+# custom config
+kbh_config.yaml
+
 #.gitkeep
 !data/raw_data/.gitkeep
 

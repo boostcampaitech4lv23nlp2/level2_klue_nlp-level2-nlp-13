@@ -51,7 +51,7 @@ def split_train_valid(valid_ratio, dataframe):
 
 if __name__ == "__main__":
     # 데이터 로드
-    train_path = "./data/raw_data/train.csv"
+    train_path = "./data/preprocessed_data/train.typed_entity_marker_punc_3.csv"
     df_origin = load_data(train_path)
 
     # 중복 제거
@@ -63,5 +63,11 @@ if __name__ == "__main__":
     )
 
     # csv로 저장
-    df_train.to_csv("./data/preprocessed_data/train.preprocessed.csv", index=False)
-    df_valid.to_csv("./data/preprocessed_data/valid.preprocessed.csv", index=False)
+    df_train.to_csv(
+        "./data/preprocessed_data/train.typed_entity_marker_punc_3.preprocessed.csv",
+        index=False,
+    )
+    df_valid.to_csv(
+        "./data/preprocessed_data/valid.typed_entity_marker_punc_3.preprocessed.csv",
+        index=False,
+    )

@@ -15,10 +15,11 @@ from transformers import (
 )
 import wandb
 
-from dataloader.dataset import load_train_dev_data, RE_Dataset
+from dataloader.dataset import load_train_dev_data, RE_Dataset, RE_Collator
 from trainer.trainer import CustomTrainer
 from trainer.metrics import compute_metrics
 from trainer.optimizer import get_optimizer, get_scheduler
+from data.utils.entity_marker import add_special_tokens
 
 
 def seed_everything(seed):
@@ -37,14 +38,22 @@ def main(config):
     print("device : ", device)
 
     print("\033[38;2;31;169;250m" + "get dataset" + "\033[0m")
-    tokenizer = AutoTokenizer.from_pretrained(config.model.name)
-    tokenized_train, train_label = load_train_dev_data(
-        config.path.train_path, tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.model.name, add_special_tokens=True
     )
-    tokenized_dev, dev_label = load_train_dev_data(config.path.dev_path, tokenizer)
+    # Entity Marker를 적용할 경우
+    if config.data.entity_marker_type is not None:
+        added_token_num, tokenizer = add_special_tokens(
+            config.data.entity_marker_type, tokenizer
+        )
+
+    tokenized_train, train_label = load_train_dev_data(config.path.train_path)
+    tokenized_dev, dev_label = load_train_dev_data(config.path.dev_path)
 
     RE_train_dataset = RE_Dataset(tokenized_train, train_label)
     RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
+
+    RE_collator = RE_Collator(tokenizer)
 
     print("\033[38;2;31;169;250m" + "get model" + "\033[0m")
     model_config = AutoConfig.from_pretrained(config.model.name)
@@ -53,13 +62,16 @@ def main(config):
     model = AutoModelForSequenceClassification.from_pretrained(
         config.model.name, config=model_config
     )
+    # Entity Marker를 적용할 경우
+    if config.data.entity_marker_type is not None:
+        model.resize_token_embeddings(tokenizer.vocab_size + added_token_num)
     model.parameters
     model.to(device)
 
     print("\033[38;2;31;169;250m" + "get trainer" + "\033[0m")
-    optimizer = get_optimizer(model, config)
-    scheduler = get_scheduler(optimizer, config)
-    optimizers = (optimizer, scheduler)
+    # optimizer = get_optimizer(model, config) # 현재 사용하지 않음
+    # scheduler = get_scheduler(optimizer, config)
+    # optimizers = (optimizer, scheduler)
 
     training_args = TrainingArguments(
         output_dir=config.train.checkpoints_dir,
@@ -78,6 +90,8 @@ def main(config):
         load_best_model_at_end=config.train.load_best_model_at_end,
         report_to="wandb",
         run_name=f"{config.wandb.name}_{config.wandb.info}",
+        fp16=True,
+        fp16_opt_level="01",
     )
 
     wandb.init(
@@ -94,6 +108,7 @@ def main(config):
         train_dataset=RE_train_dataset,
         eval_dataset=RE_dev_dataset,
         compute_metrics=compute_metrics,
+        data_collator=RE_collator,
         # optimizers=optimizers, # FIX: valid 학습이 안됨 어디가 잘못되었는지 확인필요
         callbacks=[
             EarlyStoppingCallback(

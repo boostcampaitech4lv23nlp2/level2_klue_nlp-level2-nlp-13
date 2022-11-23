@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from dataloader.dataset import RE_Dataset, load_test_data, num_to_label
+from dataloader.dataset import RE_Dataset, RE_Collator, load_test_data, num_to_label
 
 
 def seed_everything(seed):
@@ -25,8 +25,10 @@ def seed_everything(seed):
     torch.backends.cudnn.benchmark = False
 
 
-def inference(model, tokenized_sent, device):
-    dataloader = DataLoader(tokenized_sent, batch_size=16, shuffle=False)
+def inference(model, tokenizer, sentences, device):
+    dataloader = DataLoader(
+        sentences, batch_size=16, shuffle=False, collate_fn=RE_Collator(tokenizer)
+    )
     model.eval()
     output_pred = []
     output_prob = []
@@ -64,13 +66,11 @@ def main(config):
     model.to(device)
 
     ### Load Dataset ###
-    test_id, tokenized_test, test_label = load_test_data(
-        config.path.test_path, tokenizer
-    )
-    RE_test_dataset = RE_Dataset(tokenized_test, test_label)
+    test_id, test_data, test_label = load_test_data(config.path.test_path)
+    RE_test_dataset = RE_Dataset(test_data, test_label)
 
     ### Predict ###
-    pred_answer, output_prob = inference(model, RE_test_dataset, device)
+    pred_answer, output_prob = inference(model, tokenizer, RE_test_dataset, device)
     pred_answer = num_to_label(pred_answer)
 
     output = pd.DataFrame(
