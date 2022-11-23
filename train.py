@@ -7,7 +7,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 import model.model as module_arch
 import wandb
-from data_loader.data_loaders import Dataloader, KfoldDataloader
+from data_loader.data_loaders import KfoldDataloader
 from utils import utils
 
 def train(args, conf):
@@ -112,7 +112,8 @@ def k_train(args, conf):
             conf.path.train_path,
             conf.path.test_path,
             conf.path.predict_path,
-            conf.data.swap,
+            conf.tokenizer.new_tokens,
+            conf.tokenizer.new_special_tokens,
         )
 
         Kmodel = module_arch.Model(

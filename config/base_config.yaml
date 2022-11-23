@@ -12,6 +12,10 @@ data:
 model:
   model_name: klue/bert-base
 
+tokenizer:
+  new_tokens: []
+  new_special_tokens: []
+
 train:
   max_epoch: 1
   batch_size: 64
