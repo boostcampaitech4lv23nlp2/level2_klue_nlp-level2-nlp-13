@@ -8,24 +8,21 @@ import transformers
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import KFold, StratifiedShuffleSplit
 from tqdm.auto import tqdm
-from ..utils import utils
-
 
 class CustomDataset(Dataset):
 
-    def __init__(self, dataset, labels):
-        self.dataset = dataset
-        self.labels = labels
+    def __init__(self, df):
+        self.df = df
 
     def __getitem__(self, idx):
-        sentence = self.dataset['sentence'][idx]
-        subject_entity = self.dataset['subject_entity'][idx]
-        object_entity = self.dataset['object_entity'][idx]
-        label = self.labels[idx]
+        sentence = self.df['sentence'].iloc[idx]
+        subject_entity = self.df['subject_entity'].iloc[idx]
+        object_entity = self.df['object_entity'].iloc[idx]
+        label = self.df['label'].iloc[idx]
         return sentence, subject_entity, object_entity, label
 
     def __len__(self):
-        return len(self.labels)
+        return len(self.df)
 
 
 class Dataloader(pl.LightningDataModule):
@@ -87,30 +84,26 @@ class Dataloader(pl.LightningDataModule):
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_name)
 
         self.tokenizer.model_max_length = 256
-        # self.use_add_token = use_add_token
-        # if self.use_add_token:
-        #     self.add_token = [
-        #         "<PERSON>",
-        #     ]
-        #     self.new_token_count = self.tokenizer.add_tokens(self.add_token)
-        # else:
-        #     self.new_token_count = 0
-        # self.swap = use_swap
-
-        # self.target_columns = ["label"]
-        # self.delete_columns = ["id"]
-        # self.text_columns = ["sentence", "subject_entity", "object_entity"]
+        self.use_add_token = use_add_token
+        if self.use_add_token:
+            self.add_token = [
+                "<PERSON>",
+            ]
+            self.new_token_count = self.tokenizer.add_tokens(self.add_token)
+        else:
+            self.new_token_count = 0
     
     def collate(self, batch):
         sentences, subject_entities, object_entities, labels = zip(*batch)
 
-        tokens_dict = self.tokenize(sentences, subject_entities, object_entities,)
+        outs = self.tokenize(sentences, subject_entities, object_entities,)
+        input_ids = outs['input_ids']
+        token_type_ids = outs['token_type_ids']
+        attention_mask = outs['attention_mask']
+        labels = torch.tensor(labels)
+        return input_ids, token_type_ids, attention_mask, labels
 
-        item = {key: val.clone().detach() for key, val in tokens_dict.items()}
-        item['labels'] = torch.tensor(labels)
-        return item
-
-    def tokenize(self, sentences, subject_entities, object_entities,):
+    def tokenize(self, sentences, subject_entities, object_entities):
         """
         tokenizer로 과제에 따라 tokenize 
         """
@@ -133,74 +126,43 @@ class Dataloader(pl.LightningDataModule):
         return tokens
 
     def preprocess(self, df):
+        from utils.utils import label_to_num
         """
         기존 subject_entity, object entity string에서 word만 추출
         e.g. "{'word': '비틀즈', 'start_idx': 24, 'end_idx': 26, 'type': 'ORG'}" => 비틀즈
         """
-        # df = df.drop(columns=self.delete_columns)
         extract_entity = lambda row: eval(row)['word'].replace("'", "")
         df['subject_entity'] = df['subject_entity'].apply(extract_entity)
         df['object_entity'] = df['object_entity'].apply(extract_entity)
 
-        # subject_entity = []
-        # object_entity = []
-
-        # for sub, obj in zip(df["subject_entity"], df["object_entity"]):
-        #     sub = eval(sub)
-        #     obj = eval(obj)
-
-        #     subject_entity.append(sub["word"].replace("'", ""))
-        #     object_entity.append(obj["word"].replace("'", ""))
-
-        # preprocessed_df = pd.DataFrame(
-        #     {
-        #         "sentence": df["sentence"],
-        #         "subject_entity": subject_entity,
-        #         "object_entity": object_entity,
-        #         "label": df["label"],
-        #     }
-        # )
-
-        try:
-            if df["label"].iloc[0] == 100:  # test_data인 경우
-                targets = []
-            else:
-                targets = df["label"].values.tolist()
-                targets = utils.label_to_num(targets)
-        except:
-            targets = []
-
-        inputs = df['sentence'].values.tolist()
-
-        return inputs, targets
+        if isinstance(df['label'].iloc[3], str): 
+            df['label'] = df['label'].apply(label_to_num)
+        
+        return df
 
     def setup(self, stage="fit"):
         if stage == "fit":
-            total_data = pd.read_csv(self.train_path)
+            total_data = pd.read_csv(self.train_path)[:1000]
 
-            split = StratifiedShuffleSplit(n_splits=1, test_size=1 - self.train_ratio, random_state=1004)
+            split = StratifiedShuffleSplit(n_splits=1, test_size=1 - self.train_ratio)
             for train_idx, val_idx in split.split(total_data, total_data["label"]):
                 train_data = total_data.loc[train_idx]
                 val_data = total_data.loc[val_idx]
 
-            train_inputs, train_targets = self.preprocess(train_data)
-            val_inputs, val_targets = self.preprocess(val_data)
-            print("train data len : ", len(train_inputs["input_ids"]))
-            print("valid data len : ", len(val_inputs["input_ids"]))
+            train_df = self.preprocess(train_data)
+            val_df = self.preprocess(val_data)
 
-            self.train_dataset = CustomDataset(train_inputs, train_targets)
-            self.val_dataset = CustomDataset(val_inputs, val_targets)
-
+            self.train_dataset = CustomDataset(train_df)
+            self.val_dataset = CustomDataset(val_df)
         else:
             test_data = pd.read_csv(self.test_path)
             predict_data = pd.read_csv(self.predict_path)
 
-            test_inputs, test_targets = self.preprocess(test_data)
-            predict_inputs, predict_targets = self.preprocess(predict_data)
-            print("predict data len : ", len(predict_inputs["input_ids"]))
+            test_df = self.preprocess(test_data)
+            predict_df = self.preprocess(predict_data)
 
-            self.test_dataset = CustomDataset(test_inputs, test_targets)
-            self.predict_dataset = CustomDataset(predict_inputs, predict_targets)
+            self.test_dataset = CustomDataset(test_df)
+            self.predict_dataset = CustomDataset(predict_df)
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, collate_fn=self.collate)

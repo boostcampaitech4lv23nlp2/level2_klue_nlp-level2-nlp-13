@@ -4,7 +4,7 @@ import re
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-
+from data_loader.data_loaders import Dataloader
 
 def early_stop(monitor, patience, mode):
     early_stop_callback = EarlyStopping(monitor=monitor, min_delta=0.00, patience=patience, verbose=False, mode=mode)
@@ -90,7 +90,7 @@ def load_model(args, conf, dataloader: Dataloader, model):
 def label_to_num(label):
     with open("./data/dict_label_to_num.pkl", "rb") as f:
         dict_label_to_num = pickle.load(f)
-    num_label = [dict_label_to_num[v] for v in label]
+    num_label = dict_label_to_num[label]
     return num_label
 
 
