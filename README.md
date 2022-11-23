@@ -48,5 +48,7 @@ python main.py -m i -s "save_models/klue/bert-base.ckpt" -c "base_config"
 ```
 
 ### TODO
-[] auprc warning 확인
-[] confusion matrix
+- [ ] auprc warning 확인
+- [ ] focal loss
+- [ ] confusion matrix
+- [ ] K-Fold
