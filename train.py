@@ -5,12 +5,10 @@ import pytz
 import torch
 from pytorch_lightning.loggers import WandbLogger
 
-import create_instance
 import model.model as module_arch
-import utils.utils as utils
 import wandb
 from data_loader.data_loaders import Dataloader, KfoldDataloader
-
+from utils import utils
 
 def train(args, conf):
     now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
@@ -19,7 +17,7 @@ def train(args, conf):
         project=conf.wandb.project_repo,
         name=f"{conf.wandb.name}_{conf.wandb.info}_{now_time}",
     )
-    dataloader, model = create_instance.new_instance(conf)
+    dataloader, model = utils.new_instance(conf)
     wandb_logger = WandbLogger()
 
     save_path = f"{conf.path.save_path}{conf.model.model_name}_maxEpoch{conf.train.max_epoch}_batchSize{conf.train.batch_size}_{wandb_logger.experiment.name}/"
@@ -61,8 +59,8 @@ def continue_train(args, conf):
         project=conf.wandb.project_repo,
         name=f"{conf.wandb.name}_{conf.wandb.info}",
     )
-    dataloader, model = create_instance.new_instance(conf)
-    model, args, conf = create_instance.load_model(args, conf, dataloader, model)
+    dataloader, model = utils.new_instance(conf)
+    model, args, conf = utils.load_model(args, conf, dataloader, model)
     wandb_logger = WandbLogger(project=conf.wandb.project)
 
     save_path = f"{conf.path.save_path}{conf.model.model_name}_maxEpoch{conf.train.max_epoch}_batchSize{conf.train.batch_size}_{wandb_logger.experiment.name}_{now_time}/"
@@ -195,7 +193,7 @@ def sweep(args, conf, exp_count):
         wandb.init(config=config)
         config = wandb.config
 
-        dataloader, model = create_instance.new_instance(conf, config=None)
+        dataloader, model = utils.new_instance(conf, config=None)
 
         wandb_logger = WandbLogger(project=project_name)
         save_path = f"{conf.path.save_path}{conf.model.model_name}_sweep_id_{wandb.run.name}/"
