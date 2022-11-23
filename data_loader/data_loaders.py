@@ -8,7 +8,7 @@ import transformers
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import KFold, StratifiedShuffleSplit
 from tqdm.auto import tqdm
-from utils import utils
+from ..utils import utils
 
 
 class CustomDataset(Dataset):
@@ -87,14 +87,14 @@ class Dataloader(pl.LightningDataModule):
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_name)
 
         self.tokenizer.model_max_length = 256
-        self.use_add_token = use_add_token
-        if self.use_add_token:
-            self.add_token = [
-                "<PERSON>",
-            ]
-            self.new_token_count = self.tokenizer.add_tokens(self.add_token)
-        else:
-            self.new_token_count = 0
+        # self.use_add_token = use_add_token
+        # if self.use_add_token:
+        #     self.add_token = [
+        #         "<PERSON>",
+        #     ]
+        #     self.new_token_count = self.tokenizer.add_tokens(self.add_token)
+        # else:
+        #     self.new_token_count = 0
         # self.swap = use_swap
 
         # self.target_columns = ["label"]
@@ -219,7 +219,7 @@ class Dataloader(pl.LightningDataModule):
         return self.new_token_count + self.tokenizer.vocab_size
 
 
-class KfoldDataloader(pl.LightningDataModule):
+class KfoldDataloader(Dataloader):
     def __init__(
         self,
         model_name,
@@ -234,10 +234,17 @@ class KfoldDataloader(pl.LightningDataModule):
         use_preprocessing=False,
     ):
 
-        super().__init__()
-        self.model_name = model_name
-        self.batch_size = batch_size
-        self.shuffle = shuffle
+        super().__init__(
+            model_name=model_name,
+            batch_size=batch_size,
+            train_ratio=1.0,
+            shuffle=shuffle,
+            train_path=train_path,
+            test_path=test_path,
+            predict_path=predict_path,
+            use_swap=use_swap,
+            use_add_token=False,
+        )
         self.k = k
         self.num_splits = num_splits
         self.split_seed = 1204
@@ -280,89 +287,46 @@ class KfoldDataloader(pl.LightningDataModule):
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_name)
 
         self.tokenizer.model_max_length = 128
-        self.use_preprocessing = use_preprocessing
-        if self.use_preprocessing:
-            self.add_token = [
-                "<PERSON>",
-                "...",
-                # "!!!",
-                # "???",
-                "ㅎㅎㅎ",
-                "ㅋㅋㅋ",
-                "ㄷㄷㄷ",
-            ]
-        else:
-            self.add_token = [
-                "<PERSON>",
-            ]
+        # self.use_preprocessing = use_preprocessing
+        # if self.use_preprocessing:
+        #     self.add_token = [
+        #         "<PERSON>",
+        #         "...",
+        #         # "!!!",
+        #         # "???",
+        #         "ㅎㅎㅎ",
+        #         "ㅋㅋㅋ",
+        #         "ㄷㄷㄷ",
+        #     ]
+        # else:
+        #     self.add_token = [
+        #         "<PERSON>",
+        #     ]
 
         self.new_token_count = self.tokenizer.add_tokens(self.add_token)
-        self.swap = use_swap
+        # self.swap = use_swap
 
-        self.target_columns = ["label"]
-        self.delete_columns = ["id"]
-        self.text_columns = ["sentence_1", "sentence_2"]
-
-    def tokenizing(self, dataframe, swap):
-        data = []
-        sep_token = self.tokenizer.special_tokens_map["sep_token"]
-        print("ToKenizer info: \n", self.tokenizer)
-        for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
-            text = sep_token.join([item[text_column] for text_column in self.text_columns])
-            if self.use_preprocessing:
-                text = utils.text_preprocessing(text)
-            outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
-            data.append(outputs["input_ids"])
-
-        if swap:
-            for idx, item in tqdm(dataframe.iterrows(), desc="tokenizing", total=len(dataframe)):
-                text = sep_token.join([item[text_column] for text_column in self.text_columns[::-1]])
-                if self.use_preprocessing:
-                    text = utils.text_preprocessing(text)
-                outputs = self.tokenizer(text, add_special_tokens=True, padding="max_length", truncation=True)
-                data.append(outputs["input_ids"])
-
-        return data
-
-    def preprocessing(self, data, swap):
-        data = data.drop(columns=self.delete_columns)
-
-        try:
-            if swap:
-                targets = data[self.target_columns].values.tolist() + data[self.target_columns].values.tolist()
-            else:
-                targets = data[self.target_columns].values.tolist()
-        except:
-            targets = []
-        inputs = self.tokenizing(data, swap)
-
-        return inputs, targets
-
-    def setup(self, stage="fit"):
-        if stage == "fit":
-            total_data = pd.read_csv(self.train_path)
-
-            kf = KFold(
+    def prepare_data(self):
+        total_data = pd.read_csv(self.train_path)
+        kf = KFold(
                 n_splits=self.num_splits,
                 shuffle=self.shuffle,
                 random_state=self.split_seed,
-            )
-            all_splits = [d_i for d_i in kf.split(total_data)]
-            train_indexes, val_indexes = all_splits[self.k]
+        )
+        self.split_indices = [s for s in kf.split(total_data)]
+
+    def setup(self, stage="fit"):
+        if stage == "fit":
+            train_indexes, val_indexes = self.split_indices[self.k]
             train_indexes, val_indexes = train_indexes.tolist(), val_indexes.tolist()
 
-            print("Number of splits: \n", self.num_splits)
-            print("Before Swap Train data len: \n", len(train_indexes))
-            print("Before Swap Valid data len: \n", len(val_indexes))
+            # print("Number of splits: \n", self.num_splits)
 
-            train_inputs, train_targets = self.preprocessing(total_data.loc[train_indexes], self.swap)
-            valid_inputs, valid_targets = self.preprocessing(total_data.loc[val_indexes], False)
+            train_inputs, train_targets = self.preprocess(total_data.loc[train_indexes])
+            valid_inputs, valid_targets = self.preprocess(total_data.loc[val_indexes])
 
-            train_dataset = Dataset(train_inputs, train_targets)
-            valid_dataset = Dataset(valid_inputs, valid_targets)
-
-            print("After Swap Train data len: \n", len(train_inputs))
-            print("After Swap Valid data len: \n", len(valid_inputs))
+            train_dataset = CustomDataset(train_inputs, train_targets)
+            valid_dataset = CustomDataset(valid_inputs, valid_targets)
 
             self.train_dataset = train_dataset
             self.val_dataset = valid_dataset
@@ -371,23 +335,9 @@ class KfoldDataloader(pl.LightningDataModule):
             test_data = pd.read_csv(self.test_path)
             predict_data = pd.read_csv(self.predict_path)
 
-            test_inputs, test_targets = self.preprocessing(test_data, False)
-            predict_inputs, predict_targets = self.preprocessing(predict_data, False)
+            test_inputs, test_targets = self.preprocess(test_data)
+            predict_inputs, predict_targets = self.preprocess(predict_data)
 
-            self.test_dataset = Dataset(test_inputs, test_targets)
-            self.predict_dataset = Dataset(predict_inputs, predict_targets)
+            self.test_dataset = CustomDataset(test_inputs, test_targets)
+            self.predict_dataset = CustomDataset(predict_inputs, predict_targets)
 
-    def train_dataloader(self):
-        return torch.utils.data.DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle)
-
-    def val_dataloader(self):
-        return torch.utils.data.DataLoader(self.val_dataset, batch_size=self.batch_size)
-
-    def test_dataloader(self):
-        return torch.utils.data.DataLoader(self.test_dataset, batch_size=self.batch_size)
-
-    def predict_dataloader(self):
-        return torch.utils.data.DataLoader(self.predict_dataset, batch_size=self.batch_size)
-
-    def new_vocab_size(self):
-        return self.new_token_count + self.tokenizer.vocab_size
