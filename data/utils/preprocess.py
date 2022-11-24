@@ -64,10 +64,10 @@ if __name__ == "__main__":
 
     # csv로 저장
     df_train.to_csv(
-        "./data/preprocessed_data/train.typed_entity_marker_punc_3.preprocessed.csv",
+        "./data/preprocessed_data/train.typed_entity_marker_punc_3.splited.csv",
         index=False,
     )
     df_valid.to_csv(
-        "./data/preprocessed_data/valid.typed_entity_marker_punc_3.preprocessed.csv",
+        "./data/preprocessed_data/valid.typed_entity_marker_punc_3.splited.csv",
         index=False,
     )

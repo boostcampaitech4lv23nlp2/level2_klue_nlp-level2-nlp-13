@@ -88,7 +88,7 @@ def mark_entity(marker_type, word, word_type, is_subj):
 
     elif marker_type == "typed_entity_marker_punc_1":
         entity_types = {
-            "ORG": "기관명",
+            "ORG": "기관",
             "PER": "인명",
             "POH": "기타",
             "DAT": "날짜",
@@ -98,21 +98,21 @@ def mark_entity(marker_type, word, word_type, is_subj):
         marked_word = (
             f" @ * {entity_types[word_type]} * {word} @ "
             if is_subj
-            else f" # ^ {entity_types[word_type]} ^ {word} # "
+            else f" + ^ {entity_types[word_type]} ^ {word} + "
         )
 
     elif marker_type == "typed_entity_marker_punc_2":  # PER special token으로 추가하지 않고 사용
         marked_word = (
             f" @ * {word_type} * {word} @ "
             if is_subj
-            else f" # ^ {word_type} ^ {word} # "
+            else f" + ^ {word_type} ^ {word} + "
         )
 
     elif marker_type == "typed_entity_marker_punc_3":  # ORG special token으로 추가하고 사용
         marked_word = (
             f" @ * {word_type} * {word} @ "
             if is_subj
-            else f" # ^ {word_type} ^ {word} # "
+            else f" + ^ {word_type} ^ {word} + "
         )
 
     return marked_word
@@ -189,13 +189,13 @@ def get_entity_marked_dataframe(marker_type, df):
 
 
 if __name__ == "__main__":
-    train_path = "./data/raw_data/train.csv"
+    train_path = "./data/raw_data/test_data.csv"
     df_origin = load_data(train_path)
 
-    entity_marker_type = "entity_marker"  # [entity_marker, entity_marker_punc, typed_entity_marker, typed_entity_makrer_punc_1~3]
+    entity_marker_type = "typed_entity_marker_punc_3"  # [entity_marker, entity_marker_punc, typed_entity_marker, typed_entity_makrer_punc_1~3]
 
     temp = get_entity_marked_dataframe(entity_marker_type, df_origin)
-    temp.to_csv(f"./data/preprocessed_data/train.{entity_marker_type}.csv", index=False)
+    temp.to_csv(f"./data/preprocessed_data/test.{entity_marker_type}.csv", index=False)
 
     # train = pd.read_csv("./data/raw_data/train.csv")
     # test_df = train[:100]
