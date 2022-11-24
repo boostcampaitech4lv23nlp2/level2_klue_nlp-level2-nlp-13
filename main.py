@@ -30,11 +30,12 @@ if __name__ == "__main__":
     config = OmegaConf.load(f"./config/{args.config}.yaml")
 
     SEED = config.utils.seed
-    random.seed(SEED)
-    np.random.seed(SEED)
-    torch.manual_seed(SEED)
-    torch.cuda.manual_seed(SEED)
-    torch.cuda.manual_seed_all(SEED)
+    pl.seed_everything # set global seed for numpy, torch, random
+    # random.seed(SEED)
+    # np.random.seed(SEED)
+    # torch.manual_seed(SEED)
+    # torch.cuda.manual_seed(SEED)
+    # torch.cuda.manual_seed_all(SEED)
     torch.backends.cudnn.benchmark = False
     torch.use_deterministic_algorithms(True)
 

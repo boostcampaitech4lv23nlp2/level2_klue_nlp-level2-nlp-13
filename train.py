@@ -27,6 +27,7 @@ def train(args, config):
         max_epochs=config.train.max_epoch,
         log_every_n_steps=1,
         logger=wandb_logger,
+        deterministic=True,
         callbacks=[
             utils.early_stop(
                 monitor=utils.monitor_config[config.utils.monitor]["monitor"],
@@ -142,6 +143,7 @@ def k_train(args, config):
             max_epochs=config.train.max_epoch,
             log_every_n_steps=1,
             logger=wandb_logger,
+            deterministic=True,
             callbacks=[
                 utils.early_stop(
                     monitor=utils.monitor_config[config.utils.monitor]["monitor"],
@@ -205,6 +207,7 @@ def sweep(args, config, exp_count):
             max_epochs=config.train.max_epoch,
             logger=wandb_logger,
             log_every_n_steps=1,
+            deterministic=True,
             callbacks=[
                 utils.early_stop(
                     monitor=utils.monitor_config[config.utils.monitor]["monitor"],
