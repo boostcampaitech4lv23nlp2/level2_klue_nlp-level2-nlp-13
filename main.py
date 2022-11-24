@@ -46,12 +46,6 @@ if __name__ == "__main__":
         else:
             train.train(args, config)
 
-    elif args.mode == "continue train" or args.mode == "ct":
-        if args.saved_model is None:
-            print("경로를 입력해주세요")
-        else:
-            train.continue_train(args, config)
-
     elif args.mode == "exp" or args.mode == "e":
         exp_count = int(input("실험할 횟수를 입력해주세요 "))
         train.sweep(args, config, exp_count)
