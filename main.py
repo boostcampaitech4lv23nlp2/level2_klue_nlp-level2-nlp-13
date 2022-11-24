@@ -27,9 +27,9 @@ if __name__ == "__main__":
         help="저장된 모델의 파일 경로를 입력해주세요. 예시: save_models/klue/roberta-small/epoch=?-step=?.ckpt 또는 save_models/model.pt",
     )
     args, _ = parser.parse_known_args()
-    conf = OmegaConf.load(f"./config/{args.config}.yaml")
+    config = OmegaConf.load(f"./config/{args.config}.yaml")
 
-    SEED = conf.utils.seed
+    SEED = config.utils.seed
     random.seed(SEED)
     np.random.seed(SEED)
     torch.manual_seed(SEED)
@@ -39,27 +39,27 @@ if __name__ == "__main__":
     torch.use_deterministic_algorithms(True)
 
     if args.mode == "train" or args.mode == "t":
-        if conf.k_fold.use_k_fold:
-            train.k_train(args, conf)
+        if config.k_fold.use_k_fold:
+            train.k_train(args, config)
 
         else:
-            train.train(args, conf)
+            train.train(args, config)
 
     elif args.mode == "continue train" or args.mode == "ct":
         if args.saved_model is None:
             print("경로를 입력해주세요")
         else:
-            train.continue_train(args, conf)
+            train.continue_train(args, config)
 
     elif args.mode == "exp" or args.mode == "e":
         exp_count = int(input("실험할 횟수를 입력해주세요 "))
-        train.sweep(args, conf, exp_count)
+        train.sweep(args, config, exp_count)
 
     elif args.mode == "inference" or args.mode == "i":
         if args.saved_model is None:
             print("경로를 입력해주세요")
         else:
-            inference.inference(args, conf)
+            inference.inference(args, config)
     else:
         print("모드를 다시 설정해주세요 ")
         print("train     : t,\ttrain")
