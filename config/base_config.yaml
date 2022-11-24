@@ -3,6 +3,7 @@ path:
   test_path: ./data/raw_data/train.csv
   predict_path: ./data/raw_data/test_data.csv
   save_path: saved_models/
+  ckpt_path: # checkpoint path for resuming training
 
 dataloader:
   shuffle: True
@@ -14,7 +15,7 @@ model:
   architecture: BaseModel
 
 tokenizer:
-  new_tokens: [<org>]
+  new_tokens: []
   new_special_tokens: []
 
 train:

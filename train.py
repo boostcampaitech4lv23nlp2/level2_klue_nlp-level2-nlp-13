@@ -42,8 +42,10 @@ def train(args, config):
             ),
         ],
     )
-
-    trainer.fit(model=model, datamodule=dataloader)
+    if config.path.ckpt_path is None:
+        trainer.fit(model=model, datamodule=dataloader)
+    else:
+        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
     trainer.test(model=model, datamodule=dataloader)
     wandb.finish()
 
@@ -52,47 +54,47 @@ def train(args, config):
     # torch.save(model, save_path + "model.pt")
 
 
-def continue_train(args, config):
-    now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
-    wandb.init(
-        entity=config.wandb.team_account_name,
-        project=config.wandb.project_repo,
-        name=f"{config.wandb.name}_{config.wandb.info}",
-    )
-    dataloader, model = utils.new_instance(config)
-    model, args, config = utils.load_model(args, config, dataloader, model)
-    wandb_logger = WandbLogger(project=config.wandb.project)
+# def continue_train(args, config):
+#     now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
+#     wandb.init(
+#         entity=config.wandb.team_account_name,
+#         project=config.wandb.project_repo,
+#         name=f"{config.wandb.name}_{config.wandb.info}",
+#     )
+#     dataloader, model = utils.new_instance(config)
+#     model, args, config = utils.load_model(args, config, dataloader, model)
+#     wandb_logger = WandbLogger(project=config.wandb.project)
 
-    save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}_{now_time}/"
-    trainer = pl.Trainer(
-        accelerator="gpu",
-        devices=1,
-        max_epochs=config.train.max_epoch,
-        log_every_n_steps=1,
-        logger=wandb_logger,
-        callbacks=[
-            utils.early_stop(
-                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-                patience=config.utils.patience,
-                mode=utils.monitor_config[config.utils.monitor]["mode"],
-            ),
-            utils.best_save(
-                save_path=save_path,
-                top_k=config.utils.top_k,
-                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-                mode=utils.monitor_config[config.utils.monitor]["mode"],
-                filename="{epoch}-{step}-{val_loss}-{val_f1}",
-            ),
-        ],
-    )
+#     save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}_{now_time}/"
+#     trainer = pl.Trainer(
+#         accelerator="gpu",
+#         devices=1,
+#         max_epochs=config.train.max_epoch,
+#         log_every_n_steps=1,
+#         logger=wandb_logger,
+#         callbacks=[
+#             utils.early_stop(
+#                 monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+#                 patience=config.utils.patience,
+#                 mode=utils.monitor_config[config.utils.monitor]["mode"],
+#             ),
+#             utils.best_save(
+#                 save_path=save_path,
+#                 top_k=config.utils.top_k,
+#                 monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+#                 mode=utils.monitor_config[config.utils.monitor]["mode"],
+#                 filename="{epoch}-{step}-{val_loss}-{val_f1}",
+#             ),
+#         ],
+#     )
 
-    trainer.fit(model=model, datamodule=dataloader)
-    trainer.test(model=model, datamodule=dataloader)
-    wandb.finish()
+#     trainer.fit(model=model, datamodule=dataloader)
+#     trainer.test(model=model, datamodule=dataloader)
+#     wandb.finish()
 
-    trainer.save_checkpoint(save_path + "model.ckpt")
-    model.plm.save_pretrained(save_path)
-    # torch.save(model, save_path + "model.pt")
+#     trainer.save_checkpoint(save_path + "model.ckpt")
+#     model.plm.save_pretrained(save_path)
+#     # torch.save(model, save_path + "model.pt")
 
 
 def k_train(args, config):
