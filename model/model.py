@@ -13,12 +13,12 @@ from . import loss as loss_module
 warnings.filterwarnings("ignore")
 
 
-class Base_Model(pl.LightningModule):
-    def __init__(self, conf, new_vocab_size):
+class BaseModel(pl.LightningModule):
+    def __init__(self, config, new_vocab_size):
         super().__init__()
         self.save_hyperparameters()
-        self.config = conf
-        self.model_name = self.config.model.model_name
+        self.config = config
+        self.model_name = self.config.model.name
         self.lr = self.config.train.learning_rate
         self.plm = transformers.AutoModelForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path=self.model_name,
@@ -92,7 +92,7 @@ class Base_Model(pl.LightningModule):
         self.log("test_acc", metrics["accuracy"], on_step=True, prog_bar=True)
 
     def predict_step(self, batch, batch_idx):
-        input_ids, token_type_ids, attention_mask = batch
+        input_ids, token_type_ids, attention_mask, _ = batch
         logits = self((input_ids, token_type_ids, attention_mask))
 
         self.output_pred = np.argmax(logits.detach().cpu().numpy(), axis=-1)
@@ -106,6 +106,6 @@ class Base_Model(pl.LightningModule):
         return optimizer
 
 
-class Custom_Model(Base_Model):
+class CustomModel(BaseModel):
     def __init__(self, conf, new_vocab_size):
         super().__init__(conf, new_vocab_size)
