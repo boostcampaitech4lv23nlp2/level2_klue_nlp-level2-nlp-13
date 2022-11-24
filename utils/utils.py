@@ -3,9 +3,10 @@ import re
 import torch
 import pytorch_lightning as pl
 import model.model as module_arch
+import data_loader.data_loaders as datamodule_arch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from data_loader.data_loaders import BaseDataloader, KfoldDataloader
+
 
 def early_stop(monitor, patience, mode):
     early_stop_callback = EarlyStopping(monitor=monitor, min_delta=0.00, patience=patience, verbose=False, mode=mode)
@@ -22,26 +23,16 @@ def best_save(save_path, top_k, monitor, mode, filename):
     )
     return checkpoint_callback
 
-def new_instance(conf):
+def new_instance(config):
 
-    dataloader = BaseDataloader(
-        conf.model.model_name,
-        conf.train.batch_size,
-        conf.data.train_ratio,
-        conf.data.shuffle,
-        conf.path.train_path,
-        conf.path.test_path,
-        conf.path.predict_path,
-        conf.tokenizer.new_tokens,
-        conf.tokenizer.new_special_tokens,
-    )
+    dataloader = getattr(datamodule_arch, config.dataloader.architecture)(config)
 
-    model = module_arch.Custom_Model(conf, dataloader.new_vocab_size)
+    model = getattr(module_arch, config.model.architecture)(config, dataloader.new_vocab_size)
 
     return dataloader, model
 
 
-def load_model(args, conf, dataloader: BaseDataloader, model):
+def load_model(args, config, dataloader, model):
     """
     불러온 모델이 저장되어 있는 디렉터리를 parsing함
     ex) 'save_models/klue/roberta-small_maxEpoch1_batchSize32_blooming-wind-57'
@@ -61,9 +52,9 @@ def load_model(args, conf, dataloader: BaseDataloader, model):
     else:
         exit("saved_model 파일 오류")
 
-    conf.path.save_path = save_path + "/"
-    conf.model.model_name = "/".join(model_name.split("/")[1:])
-    return model, args, conf
+    config.path.save_path = save_path + "/"
+    config.model.model_name = "/".join(model_name.split("/")[1:])
+    return model, args, config
 
 
 def text_preprocessing(sentence):

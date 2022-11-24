@@ -2,18 +2,19 @@ path:
   train_path: ./data/raw_data/train.csv
   test_path: ./data/raw_data/train.csv
   predict_path: ./data/raw_data/test_data.csv
-  save_path: save_models/
+  save_path: saved_models/
 
-data:
+dataloader:
   shuffle: True
   train_ratio: 0.8
-  swap: False
+  architecture: BaseDataloader
 
 model:
-  model_name: klue/bert-base
+  name: klue/bert-base
+  architecture: BaseModel
 
 tokenizer:
-  new_tokens: []
+  new_tokens: [<org>]
   new_special_tokens: []
 
 train:

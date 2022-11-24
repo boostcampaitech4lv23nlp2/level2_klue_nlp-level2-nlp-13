@@ -26,27 +26,19 @@ class CustomDataset(Dataset):
 
 
 class BaseDataloader(pl.LightningDataModule):
-    def __init__(
-        self,
-        model_name,
-        batch_size,
-        train_ratio,
-        shuffle,
-        train_path,
-        test_path,
-        predict_path,
-        new_tokens=[],
-        new_special_tokens=[],
-    ):
+    def __init__(self, config):
         super().__init__()
-        self.model_name = model_name
-        self.batch_size = batch_size
-        self.train_ratio = train_ratio
-        self.shuffle = shuffle
 
-        self.train_path = train_path
-        self.test_path = test_path
-        self.predict_path = predict_path
+        self.model_name = config.model.name
+        self.batch_size = config.train.batch_size
+        self.train_ratio = config.dataloader.train_ratio
+        self.shuffle = config.dataloader.shuffle
+        self.new_tokens = list(config.tokenizer.new_tokens)
+        self.new_special_tokens = list(config.tokenizer.new_special_tokens)
+
+        self.train_path = config.path.train_path
+        self.test_path = config.path.test_path
+        self.predict_path = config.path.predict_path
 
         self.train_dataset = None
         self.val_dataset = None
@@ -74,23 +66,23 @@ class BaseDataloader(pl.LightningDataModule):
             ],
         }
 
-        if model_name in model_list["bert"]:
+        if self.model_name in model_list["bert"]:
             self.tokenizer = transformers.BertTokenizer.from_pretrained(self.model_name)
-        elif model_name in model_list["electra"]:
+        elif self.model_name in model_list["electra"]:
             self.tokenizer = transformers.ElectraTokenizer.from_pretrained(self.model_name)
-        elif model_name in model_list["roberta"]:
+        elif self.model_name in model_list["roberta"]:
             self.tokenizer = transformers.RobertaTokenizer.from_pretrained(self.model_name)
-        elif model_name in model_list["funnel"]:
+        elif self.model_name in model_list["funnel"]:
             self.tokenizer = transformers.FunnelTokenizer.from_pretrained(self.model_name)
         else:
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_name)
 
         # self.tokenizer.model_max_length = 256
         self.new_token_count = 0
-        if new_tokens == []:
-            self.new_token_count += self.tokenizer.add_tokens(new_tokens, special_tokens=False)
-        if new_special_tokens == []:
-            self.new_token_count += self.tokenizer.add_tokens(new_special_tokens, special_tokens=True) 
+        if self.new_tokens != []:
+            self.new_token_count += self.tokenizer.add_tokens(self.new_tokens, special_tokens=False)
+        if self.new_special_tokens != []:
+            self.new_token_count += self.tokenizer.add_tokens(self.new_special_tokens, special_tokens=True) 
     
     def batchify(self, batch):
         ''' data collator '''
@@ -146,8 +138,7 @@ class BaseDataloader(pl.LightningDataModule):
 
             if self.train_ratio < 1.0 :
                 train_data, val_data = train_test_split(total_data, train_size=self.train_ratio)
-            elif self.train_ratio == 1.0 :
-                train_data, val_data = total_data, total_data
+
 
             # new dataframe 
             train_df = self.preprocess(train_data)

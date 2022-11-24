@@ -10,34 +10,34 @@ import wandb
 from data_loader.data_loaders import KfoldDataloader
 from utils import utils
 
-def train(args, conf):
+def train(args, config):
     now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
     wandb.init(
-        entity=conf.wandb.team_account_name,
-        project=conf.wandb.project_repo,
-        name=f"{conf.wandb.name}_{conf.wandb.info}_{now_time}",
+        entity=config.wandb.team_account_name,
+        project=config.wandb.project_repo,
+        name=f"{config.wandb.name}_{config.wandb.info}_{now_time}",
     )
-    dataloader, model = utils.new_instance(conf)
+    dataloader, model = utils.new_instance(config)
     wandb_logger = WandbLogger()
 
-    save_path = f"{conf.path.save_path}{conf.model.model_name}_maxEpoch{conf.train.max_epoch}_batchSize{conf.train.batch_size}_{wandb_logger.experiment.name}/"
+    save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
-        max_epochs=conf.train.max_epoch,
+        max_epochs=config.train.max_epoch,
         log_every_n_steps=1,
         logger=wandb_logger,
         callbacks=[
             utils.early_stop(
-                monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
-                patience=conf.utils.patience,
-                mode=utils.monitor_config[conf.utils.monitor]["mode"],
+                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                patience=config.utils.patience,
+                mode=utils.monitor_config[config.utils.monitor]["mode"],
             ),
             utils.best_save(
                 save_path=save_path,
-                top_k=conf.utils.top_k,
-                monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
-                mode=utils.monitor_config[conf.utils.monitor]["mode"],
+                top_k=config.utils.top_k,
+                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                mode=utils.monitor_config[config.utils.monitor]["mode"],
                 filename="{epoch}-{step}-{val_loss}-{val_f1}",
             ),
         ],
@@ -52,35 +52,35 @@ def train(args, conf):
     # torch.save(model, save_path + "model.pt")
 
 
-def continue_train(args, conf):
+def continue_train(args, config):
     now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
     wandb.init(
-        entity=conf.wandb.team_account_name,
-        project=conf.wandb.project_repo,
-        name=f"{conf.wandb.name}_{conf.wandb.info}",
+        entity=config.wandb.team_account_name,
+        project=config.wandb.project_repo,
+        name=f"{config.wandb.name}_{config.wandb.info}",
     )
-    dataloader, model = utils.new_instance(conf)
-    model, args, conf = utils.load_model(args, conf, dataloader, model)
-    wandb_logger = WandbLogger(project=conf.wandb.project)
+    dataloader, model = utils.new_instance(config)
+    model, args, config = utils.load_model(args, config, dataloader, model)
+    wandb_logger = WandbLogger(project=config.wandb.project)
 
-    save_path = f"{conf.path.save_path}{conf.model.model_name}_maxEpoch{conf.train.max_epoch}_batchSize{conf.train.batch_size}_{wandb_logger.experiment.name}_{now_time}/"
+    save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}_{now_time}/"
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
-        max_epochs=conf.train.max_epoch,
+        max_epochs=config.train.max_epoch,
         log_every_n_steps=1,
         logger=wandb_logger,
         callbacks=[
             utils.early_stop(
-                monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
-                patience=conf.utils.patience,
-                mode=utils.monitor_config[conf.utils.monitor]["mode"],
+                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                patience=config.utils.patience,
+                mode=utils.monitor_config[config.utils.monitor]["mode"],
             ),
             utils.best_save(
                 save_path=save_path,
-                top_k=conf.utils.top_k,
-                monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
-                mode=utils.monitor_config[conf.utils.monitor]["mode"],
+                top_k=config.utils.top_k,
+                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                mode=utils.monitor_config[config.utils.monitor]["mode"],
                 filename="{epoch}-{step}-{val_loss}-{val_f1}",
             ),
         ],
@@ -95,33 +95,33 @@ def continue_train(args, conf):
     # torch.save(model, save_path + "model.pt")
 
 
-def k_train(args, conf):
-    project_name = conf.wandb.project
+def k_train(args, config):
+    project_name = config.wandb.project
 
     results = []
-    num_folds = conf.k_fold.num_folds
+    num_folds = config.k_fold.num_folds
 
     exp_name = WandbLogger(project=project_name).experiment.name
     for k in range(num_folds):
         k_datamodule = KfoldDataloader(
-            conf.model.model_name,
-            conf.train.batch_size,
-            conf.data.shuffle,
+            config.model.name,
+            config.train.batch_size,
+            config.data.shuffle,
             k,
-            conf.k_fold.num_split,
-            conf.path.train_path,
-            conf.path.test_path,
-            conf.path.predict_path,
-            conf.tokenizer.new_tokens,
-            conf.tokenizer.new_special_tokens,
+            config.k_fold.num_split,
+            config.path.train_path,
+            config.path.test_path,
+            config.path.predict_path,
+            config.tokenizer.new_tokens,
+            config.tokenizer.new_special_tokens,
         )
 
         Kmodel = module_arch.Model(
-            conf.model.model_name,
-            conf.train.learning_rate,
-            conf.train.loss,
+            config.model.name,
+            config.train.learning_rate,
+            config.train.loss,
             k_datamodule.new_vocab_size(),
-            conf.train.use_frozen,
+            config.train.use_frozen,
         )
 
         if k + 1 == 1:
@@ -133,24 +133,24 @@ def k_train(args, conf):
         else:
             name_ = f"{k+1}th_fold"
         wandb_logger = WandbLogger(project=project_name, name=exp_name + f"_{name_}")
-        save_path = f"{conf.path.save_path}{conf.model.model_name}_maxEpoch{conf.train.max_epoch}_batchSize{conf.train.batch_size}_{wandb_logger.experiment.name}_{name_}/"
+        save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}_{name_}/"
         trainer = pl.Trainer(
             accelerator="gpu",
             devices=1,
-            max_epochs=conf.train.max_epoch,
+            max_epochs=config.train.max_epoch,
             log_every_n_steps=1,
             logger=wandb_logger,
             callbacks=[
                 utils.early_stop(
-                    monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
-                    patience=conf.utils.patience,
-                    mode=utils.monitor_config[conf.utils.monitor]["mode"],
+                    monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                    patience=config.utils.patience,
+                    mode=utils.monitor_config[config.utils.monitor]["mode"],
                 ),
                 utils.best_save(
                     save_path=save_path,
-                    top_k=conf.utils.top_k,
-                    monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
-                    mode=utils.monitor_config[conf.utils.monitor]["mode"],
+                    top_k=config.utils.top_k,
+                    monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                    mode=utils.monitor_config[config.utils.monitor]["mode"],
                     filename="{epoch}-{step}-{val_loss}-{val_f1}",
                 ),
             ],
@@ -169,8 +169,8 @@ def k_train(args, conf):
     print(f"{num_folds}-fold pearson 평균 점수: {score}")
 
 
-def sweep(args, conf, exp_count):
-    project_name = conf.wandb.project
+def sweep(args, config, exp_count):
+    project_name = config.wandb.project
 
     sweep_config = {
         "method": "bayes",
@@ -194,26 +194,26 @@ def sweep(args, conf, exp_count):
         wandb.init(config=config)
         config = wandb.config
 
-        dataloader, model = utils.new_instance(conf, config=None)
+        dataloader, model = utils.new_instance(config, config=None)
 
         wandb_logger = WandbLogger(project=project_name)
-        save_path = f"{conf.path.save_path}{conf.model.model_name}_sweep_id_{wandb.run.name}/"
+        save_path = f"{config.path.save_path}{config.model.name}_sweep_id_{wandb.run.name}/"
         trainer = pl.Trainer(
             gpus=1,
-            max_epochs=conf.train.max_epoch,
+            max_epochs=config.train.max_epoch,
             logger=wandb_logger,
             log_every_n_steps=1,
             callbacks=[
                 utils.early_stop(
-                    monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
-                    patience=conf.utils.patience,
-                    mode=utils.monitor_config[conf.utils.monitor]["mode"],
+                    monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                    patience=config.utils.patience,
+                    mode=utils.monitor_config[config.utils.monitor]["mode"],
                 ),
                 utils.best_save(
                     save_path=save_path,
-                    top_k=conf.utils.top_k,
-                    monitor=utils.monitor_config[conf.utils.monitor]["monitor"],
-                    mode=utils.monitor_config[conf.utils.monitor]["mode"],
+                    top_k=config.utils.top_k,
+                    monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                    mode=utils.monitor_config[config.utils.monitor]["mode"],
                     filename="{epoch}-{step}-{val_loss}-{val_f1}",
                 ),
             ],
