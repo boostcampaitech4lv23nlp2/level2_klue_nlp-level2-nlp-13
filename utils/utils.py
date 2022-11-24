@@ -1,11 +1,13 @@
 import pickle
 import re
-import torch
+
 import pytorch_lightning as pl
-import model.model as module_arch
-import data_loader.data_loaders as datamodule_arch
+import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+
+import data_loader.data_loaders as datamodule_arch
+import model.model as module_arch
 
 
 def early_stop(monitor, patience, mode):
@@ -22,6 +24,7 @@ def best_save(save_path, top_k, monitor, mode, filename):
         filename=filename,
     )
     return checkpoint_callback
+
 
 def new_instance(config):
 
