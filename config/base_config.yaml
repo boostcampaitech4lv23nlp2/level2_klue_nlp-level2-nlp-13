@@ -14,7 +14,7 @@ model:
   architecture: BaseModel
 
 tokenizer:
-  new_tokens: [<org>]
+  new_tokens: []
   new_special_tokens: []
 
 train:
