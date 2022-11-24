@@ -28,6 +28,7 @@ def train(args, config):
         log_every_n_steps=1,
         logger=wandb_logger,
         deterministic=True,
+        precision=config.utils.precision,
         callbacks=[
             utils.early_stop(
                 monitor=utils.monitor_config[config.utils.monitor]["monitor"],
@@ -144,6 +145,7 @@ def k_train(args, config):
             log_every_n_steps=1,
             logger=wandb_logger,
             deterministic=True,
+            precision=config.utils.precision,
             callbacks=[
                 utils.early_stop(
                     monitor=utils.monitor_config[config.utils.monitor]["monitor"],
@@ -208,6 +210,7 @@ def sweep(args, config, exp_count):
             logger=wandb_logger,
             log_every_n_steps=1,
             deterministic=True,
+            precision=config.utils.precision,
             callbacks=[
                 utils.early_stop(
                     monitor=utils.monitor_config[config.utils.monitor]["monitor"],
