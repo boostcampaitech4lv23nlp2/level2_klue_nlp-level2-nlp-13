@@ -138,14 +138,18 @@ class BaseDataloader(pl.LightningDataModule):
 
             if self.train_ratio < 1.0 :
                 train_data, val_data = train_test_split(total_data, train_size=self.train_ratio)
+                # new dataframe 
+                train_df = self.preprocess(train_data)
+                val_df = self.preprocess(val_data)
 
+                self.train_dataset = CustomDataset(train_df)
+                self.val_dataset = CustomDataset(val_df)
 
-            # new dataframe 
-            train_df = self.preprocess(train_data)
-            val_df = self.preprocess(val_data)
+            elif self.train_ratio == 1.0:
+                train_data = total_data
+                train_df = self.preprocess(train_data)
+                self.train_dataset = CustomDataset(train_df)
 
-            self.train_dataset = CustomDataset(train_df)
-            self.val_dataset = CustomDataset(val_df)
         else:
             test_data = pd.read_csv(self.test_path)
             predict_data = pd.read_csv(self.predict_path)

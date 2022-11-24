@@ -44,6 +44,11 @@ def train(args, config):
             ),
         ],
     )
+    if config.dataloader.train_ratio == 1.0:
+        # disable validation and sanity check when the train data is used only for training
+        trainer.limit_val_batches = 0.0
+        trainer.num_sanity_val_steps = 0
+
     if config.path.ckpt_path is None:
         trainer.fit(model=model, datamodule=dataloader)
     else:
