@@ -4,14 +4,13 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 
-import create_instance
 from utils import utils
 
 
 def inference(args, conf):
     trainer = pl.Trainer(gpus=1, max_epochs=conf.train.max_epoch, log_every_n_steps=1)
-    dataloader, model = create_instance.new_instance(conf)
-    model, _, __ = create_instance.load_model(args, conf, dataloader, model)
+    dataloader, model = utils.new_instance(conf)
+    model, _, __ = utils.load_model(args, conf, dataloader, model)
 
     output = trainer.predict(model=model, datamodule=dataloader)
     pred_answer, output_prob = zip(*output)

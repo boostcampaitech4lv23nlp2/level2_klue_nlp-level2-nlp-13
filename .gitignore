@@ -197,6 +197,7 @@ output_n.csv
 README.md
 
 save_models/
+saved_models/
 config/*
 !config/base_config.yaml
 outputs/
