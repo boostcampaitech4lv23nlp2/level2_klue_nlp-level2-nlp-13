@@ -139,13 +139,18 @@ class BaseDataloader(pl.LightningDataModule):
             if self.train_ratio < 1.0 :
                 train_data, val_data = train_test_split(total_data, train_size=self.train_ratio)
 
+                # new dataframe 
+                train_df = self.preprocess(train_data)
+                val_df = self.preprocess(val_data)
 
-            # new dataframe 
-            train_df = self.preprocess(train_data)
-            val_df = self.preprocess(val_data)
+                self.train_dataset = CustomDataset(train_df)
+                self.val_dataset = CustomDataset(val_df)
 
-            self.train_dataset = CustomDataset(train_df)
-            self.val_dataset = CustomDataset(val_df)
+            elif self.train_ratio == 1.0:
+                train_data = total_data
+                train_df = self.preprocess(train_data)
+                self.train_dataset = CustomDataset(train_df)
+
         else:
             test_data = pd.read_csv(self.test_path)
             predict_data = pd.read_csv(self.predict_path)
@@ -174,52 +179,29 @@ class BaseDataloader(pl.LightningDataModule):
 
 
 class KfoldDataloader(BaseDataloader):
-    def __init__(
-        self,
-        model_name,
-        batch_size,
-        shuffle,
-        k,
-        num_splits,
-        train_path,
-        test_path,
-        predict_path,
-        new_tokens=None,
-        new_special_tokens=None,
-    ):
-
-        super().__init__(
-            model_name=model_name,
-            batch_size=batch_size,
-            train_ratio=1.0,
-            shuffle=shuffle,
-            train_path=train_path,
-            test_path=test_path,
-            predict_path=predict_path,
-            new_tokens=new_tokens,
-            new_special_tokens=new_special_tokens,
-        )
+    def __init__(self, k, config):
+        super().__init__(config)
+        self.shuffle = config.dataloader.shuffle
+        self.num_splits = config.k_fold.num_split
         self.k = k
-        self.num_splits = num_splits
-
-    def prepare_data(self):
-        self.total_data = pd.read_csv(self.train_path)
-        kf = KFold(
-                n_splits=self.num_splits,
-                shuffle=self.shuffle,
-        )
-        self.split_indices = [s for s in kf.split(self.total_data)]
 
     def setup(self, stage="fit"):
         if stage == "fit":
-            train_indexes, val_indexes = self.split_indices[self.k]
-            train_indexes, val_indexes = train_indexes.tolist(), val_indexes.tolist()
+            self.total_data = pd.read_csv(self.train_path)
+            kf = KFold(
+                    n_splits=self.num_splits,
+                    shuffle=self.shuffle,
+            )
+            self.train_sets, self.val_sets = [], []
+            for train_index, val_index in kf.split(self.total_data):
+                train_inputs, train_targets = self.preprocess(self.total_data.loc[train_index])
+                val_inputs, val_targets = self.preprocess(self.total_data.loc[val_index])
 
-            train_inputs, train_targets = self.preprocess(self.total_data.loc[train_indexes])
-            valid_inputs, valid_targets = self.preprocess(self.total_data.loc[val_indexes])
+                self.train_dataset = CustomDataset(train_inputs, train_targets)
+                self.val_dataset = CustomDataset(val_inputs, val_targets)
 
-            self.train_dataset = CustomDataset(train_inputs, train_targets)
-            self.val_dataset = CustomDataset(valid_inputs, valid_targets)
+                self.train_sets.append(self.train_dataset)
+                self.val_sets.append(self.val_dataset)
 
         else:
             test_data = pd.read_csv(self.test_path)
@@ -230,6 +212,24 @@ class KfoldDataloader(BaseDataloader):
 
             self.test_dataset = CustomDataset(test_inputs, test_targets)
             self.predict_dataset = CustomDataset(predict_inputs, predict_targets)
+    
+    def train_dataloader(self):
+        return [DataLoader(
+            train_set,
+            batch_size=self.batch_size, 
+            shuffle=self.shuffle, 
+            collate_fn=self.batchify
+        )
+        for train_set in self.train_sets]
+
+    def val_dataloader(self):
+        return [DataLoader(
+            val_set,
+            batch_size=self.batch_size, 
+            shuffle=self.shuffle, 
+            collate_fn=self.batchify
+        )
+        for val_set in self.val_sets]
 
 class StratifiedDataloader(BaseDataloader):
     def __init__(

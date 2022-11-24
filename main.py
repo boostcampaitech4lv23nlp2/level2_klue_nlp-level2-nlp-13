@@ -24,19 +24,20 @@ if __name__ == "__main__":
         "--saved_model",
         "-s",
         default=None,
-        help="저장된 모델의 파일 경로를 입력해주세요. 예시: save_models/klue/roberta-small/epoch=?-step=?.ckpt 또는 save_models/model.pt",
+        help="저장된 모델의 파일 경로를 입력해주세요. 예시: saved_models/klue/roberta-small/epoch=?-step=?.ckpt 또는 save_models/model.pt",
     )
     args, _ = parser.parse_known_args()
     conf = OmegaConf.load(f"./config/{args.config}.yaml")
 
     SEED = conf.utils.seed
-    random.seed(SEED)
-    np.random.seed(SEED)
-    torch.manual_seed(SEED)
-    torch.cuda.manual_seed(SEED)
-    torch.cuda.manual_seed_all(SEED)
-    torch.backends.cudnn.benchmark = False
-    torch.use_deterministic_algorithms(True)
+    pl.seed_everything(SEED, workers=True) # covers torch, numpy, random
+    # random.seed(SEED)
+    # np.random.seed(SEED)
+    # torch.manual_seed(SEED)
+    # torch.cuda.manual_seed(SEED)
+    # torch.cuda.manual_seed_all(SEED)
+    # torch.backends.cudnn.benchmark = False
+    # torch.use_deterministic_algorithms(True)
 
     if args.mode == "train" or args.mode == "t":
         if conf.k_fold.use_k_fold:
@@ -45,11 +46,11 @@ if __name__ == "__main__":
         else:
             train.train(args, conf)
 
-    elif args.mode == "continue train" or args.mode == "ct":
-        if args.saved_model is None:
-            print("경로를 입력해주세요")
-        else:
-            train.continue_train(args, conf)
+    # elif args.mode == "continue train" or args.mode == "ct":
+    #     if args.saved_model is None:
+    #         print("경로를 입력해주세요")
+    #     else:
+    #         train.continue_train(args, conf)
 
     elif args.mode == "exp" or args.mode == "e":
         exp_count = int(input("실험할 횟수를 입력해주세요 "))

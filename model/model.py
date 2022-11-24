@@ -63,7 +63,6 @@ class BaseModel(pl.LightningModule):
         self.log("train_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
         self.log("train_auprc", metrics["auprc"], on_step=True, prog_bar=True)
         self.log("train_acc", metrics["accuracy"], on_step=True, prog_bar=True)
-
         return loss
 
     def validation_step(self, batch, batch_idx):

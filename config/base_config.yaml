@@ -3,6 +3,7 @@ path:
   test_path: ./data/raw_data/train.csv
   predict_path: ./data/raw_data/test_data.csv
   save_path: saved_models/
+  ckpt_path: # 훈련 재개 시 load할 checkpoint 위치. 처음부터 훈련 시 비워두기
 
 dataloader:
   shuffle: True
@@ -14,7 +15,7 @@ model:
   architecture: BaseModel
 
 tokenizer:
-  new_tokens: [<org>]
+  new_tokens: []
   new_special_tokens: []
 
 train:
@@ -30,10 +31,10 @@ utils:
   monitor: val_f1
   patience: 25
   top_k: 3
+  precision: 32 # default: 32. 16으로 하면 정확도를 포기하는 대신 훈련 속도 빨라짐.
 
 k_fold:
-  use_k_fold: False
-  num_folds: 3
+  use_k_fold: False # KFold 사용 여부
   num_split: 5
   
 wandb:
