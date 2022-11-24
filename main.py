@@ -24,13 +24,13 @@ if __name__ == "__main__":
         "--saved_model",
         "-s",
         default=None,
-        help="저장된 모델의 파일 경로를 입력해주세요. 예시: save_models/klue/roberta-small/epoch=?-step=?.ckpt 또는 save_models/model.pt",
+        help="저장된 모델의 파일 경로를 입력해주세요. 예시: saved_models/klue/roberta-small/epoch=?-step=?.ckpt 또는 save_models/model.pt",
     )
     args, _ = parser.parse_known_args()
     config = OmegaConf.load(f"./config/{args.config}.yaml")
 
     SEED = config.utils.seed
-    pl.seed_everything # set global seed for numpy, torch, random
+    pl.seed_everything(SEED, workers=True) # covers torch, numpy, random
     # random.seed(SEED)
     # np.random.seed(SEED)
     # torch.manual_seed(SEED)

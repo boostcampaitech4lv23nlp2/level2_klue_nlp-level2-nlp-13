@@ -108,28 +108,17 @@ def k_train(args, config):
     project_name = config.wandb.project
 
     results = []
-    num_folds = config.k_fold.num_folds
+    num_split = config.k_fold.num_split
 
     exp_name = WandbLogger(project=project_name).experiment.name
-    for k in range(num_folds):
-        k_datamodule = KfoldDataloader(
-            config.model.name,
-            config.train.batch_size,
-            config.data.shuffle,
-            k,
-            config.k_fold.num_split,
-            config.path.train_path,
-            config.path.test_path,
-            config.path.predict_path,
-            config.tokenizer.new_tokens,
-            config.tokenizer.new_special_tokens,
-        )
+    for k in range(num_split):
+        k_datamodule = KfoldDataloader(k, config)
 
         Kmodel = module_arch.Model(
             config.model.name,
             config.train.learning_rate,
             config.train.loss,
-            k_datamodule.new_vocab_size(),
+            k_datamodule.new_vocab_size,
             config.train.use_frozen,
         )
 
