@@ -88,12 +88,9 @@ class BaseDataloader(pl.LightningDataModule):
         ''' data collator '''
         sentences, subject_entities, object_entities, labels = zip(*batch)
 
-        outs = self.tokenize(sentences, subject_entities, object_entities,)
-        input_ids = outs['input_ids']
-        token_type_ids = outs['token_type_ids']
-        attention_mask = outs['attention_mask']
+        outs = self.tokenize(sentences, subject_entities, object_entities)
         labels = torch.tensor(labels)
-        return input_ids, token_type_ids, attention_mask, labels
+        return outs, labels
 
     def tokenize(self, sentences, subject_entities, object_entities):
         """
