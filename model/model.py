@@ -1,17 +1,15 @@
 import warnings
-
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torchmetrics
 import transformers
+import model.loss as loss_module
 from torch.optim.lr_scheduler import ExponentialLR, LambdaLR, StepLR
 
-from . import loss as loss_module
 
 warnings.filterwarnings("ignore")
-
 
 class BaseModel(pl.LightningModule):
     def __init__(self, config, new_vocab_size):
@@ -46,14 +44,14 @@ class BaseModel(pl.LightningModule):
                 param.requires_grad = True
 
     def forward(self, x):
-        input_ids, token_type_ids, attention_mask = x
-        x = self.plm(input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)["logits"]
+        #input_ids, token_type_ids, attention_mask = x
+        x = self.plm(**x)["logits"]
 
         return x
 
     def training_step(self, batch, batch_idx):
-        input_ids, token_type_ids, attention_mask, labels = batch
-        logits = self((input_ids, token_type_ids, attention_mask))
+        tokens, labels = batch
+        logits = self(tokens)
 
         loss = self.loss_func(logits, labels.long(), self.config)
         self.log("train_loss", loss, on_step=True, prog_bar=True)
@@ -63,12 +61,11 @@ class BaseModel(pl.LightningModule):
         self.log("train_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
         self.log("train_auprc", metrics["auprc"], on_step=True, prog_bar=True)
         self.log("train_acc", metrics["accuracy"], on_step=True, prog_bar=True)
-
         return loss
 
     def validation_step(self, batch, batch_idx):
-        input_ids, token_type_ids, attention_mask, labels = batch
-        logits = self((input_ids, token_type_ids, attention_mask))
+        tokens, labels = batch
+        logits = self(tokens)
 
         loss = self.loss_func(logits, labels.long(), self.config)
         self.log("val_loss", loss, on_step=True, prog_bar=True)
@@ -82,8 +79,8 @@ class BaseModel(pl.LightningModule):
         return loss
 
     def test_step(self, batch, batch_idx):
-        input_ids, token_type_ids, attention_mask, labels = batch
-        logits = self((input_ids, token_type_ids, attention_mask))
+        tokens, labels = batch
+        logits = self(tokens)
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
@@ -92,8 +89,8 @@ class BaseModel(pl.LightningModule):
         self.log("test_acc", metrics["accuracy"], on_step=True, prog_bar=True)
 
     def predict_step(self, batch, batch_idx):
-        input_ids, token_type_ids, attention_mask, _ = batch
-        logits = self((input_ids, token_type_ids, attention_mask))
+        tokens, _ = batch
+        logits = self(tokens)
 
         self.output_pred = np.argmax(logits.detach().cpu().numpy(), axis=-1)
         self.output_prob = nn.functional.softmax(logits, dim=-1).detach().cpu().numpy()
