@@ -1,14 +1,13 @@
 import argparse
 import random
-
 import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from omegaconf import OmegaConf
-
 import inference
 import train
+from omegaconf import OmegaConf
+
 
 if __name__ == "__main__":
     """

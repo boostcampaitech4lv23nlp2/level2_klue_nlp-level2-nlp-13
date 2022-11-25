@@ -1,17 +1,15 @@
 import warnings
-
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torchmetrics
 import transformers
+import model.loss as loss_module
 from torch.optim.lr_scheduler import ExponentialLR, LambdaLR, StepLR
 
-from . import loss as loss_module
 
 warnings.filterwarnings("ignore")
-
 
 class BaseModel(pl.LightningModule):
     def __init__(self, config, new_vocab_size):

@@ -1,14 +1,12 @@
 import datetime
-
 import pytorch_lightning as pl
 import pytz
 import torch
-from pytorch_lightning.loggers import WandbLogger
-
-import model.model as module_arch
 import wandb
 from data_loader.data_loaders import KfoldDataloader
+from pytorch_lightning.loggers import WandbLogger
 from utils import utils
+from model import model as module_arch
 
 def train(config):
     now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
