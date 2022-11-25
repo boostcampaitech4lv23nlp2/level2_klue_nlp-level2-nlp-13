@@ -181,7 +181,7 @@ class KfoldDataloader(BaseDataloader):
     def __init__(self, k, config):
         super().__init__(config)
         self.shuffle = config.dataloader.shuffle
-        self.num_splits = config.k_fold.num_split
+        self.num_splits = config.k_fold.num_splits
         self.k = k
 
     def setup(self, stage="fit"):

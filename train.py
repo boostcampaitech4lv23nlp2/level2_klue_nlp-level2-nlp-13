@@ -104,14 +104,14 @@ def train(args, config):
 #     # torch.save(model, save_path + "model.pt")
 
 
-def k_train(args, config):
+def k_train(config):
     project_name = config.wandb.project
 
     results = []
-    num_split = config.k_fold.num_split
+    num_folds = config.k_fold.num_folds
 
     exp_name = WandbLogger(project=project_name).experiment.name
-    for k in range(num_split):
+    for k in range(num_folds):
         k_datamodule = KfoldDataloader(k, config)
 
         Kmodel = module_arch.Model(
