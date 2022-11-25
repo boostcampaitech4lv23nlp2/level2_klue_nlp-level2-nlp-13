@@ -46,9 +46,11 @@ python main.py -m ct -s "save_models/klue/bert-base.ckpt" -c "base_config"
 python main.py -m i -s "save_models/klue/bert-base.ckpt"
 python main.py -m i -s "save_models/klue/bert-base.ckpt" -c "base_config"
 ```
+### base_config.yaml
+- tokenizer - syllable: True 설정하면 음절 단위 토크나이저 적용 가능
+
 
 ### TODO
-- [ ] auprc warning 확인
 - [ ] focal loss
 - [ ] confusion matrix
 - [ ] K-Fold
