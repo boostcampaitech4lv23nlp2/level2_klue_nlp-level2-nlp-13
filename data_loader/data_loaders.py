@@ -139,7 +139,7 @@ class BaseDataloader(pl.LightningDataModule):
                 train_data = total_data  
             else:
                 train_data, val_data = train_test_split(total_data, train_size=self.train_ratio)
-                
+
             # new dataframe 
             train_df = self.preprocess(train_data)
             val_df = self.preprocess(val_data)
@@ -210,7 +210,7 @@ class KfoldDataloader(BaseDataloader):
             self.predict_dataset = CustomDataset(predict_inputs, predict_targets)
     
 class StratifiedDataloader(BaseDataloader):
-    def __init__(config):
+    def __init__(self, config):
         super().__init__(config)
         assert self.train_ratio > 0.0 and self.train_ratio <1.0
 
