@@ -10,7 +10,7 @@ import wandb
 from data_loader.data_loaders import KfoldDataloader
 from utils import utils
 
-def train(args, config):
+def train(config):
     now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
     wandb.init(
         entity=config.wandb.team_account_name,
@@ -169,7 +169,7 @@ def k_train(config):
     print(f"{num_folds}-fold pearson 평균 점수: {score}")
 
 
-def sweep(args, config, exp_count):
+def sweep(config, exp_count):
     project_name = config.wandb.project
 
     sweep_config = {
