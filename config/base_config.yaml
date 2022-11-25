@@ -15,7 +15,7 @@ model:
 
 tokenizer:
   max_len: 256
-  new_tokens: [<org>]
+  new_tokens: []
   new_special_tokens: []
   syllable: False
 
