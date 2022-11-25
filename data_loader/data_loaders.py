@@ -133,6 +133,11 @@ class BaseDataloader(pl.LightningDataModule):
         pad_token_ids = self.tokenizer.convert_tokens_to_ids(self.tokenizer.special_tokens_map["pad_token"])
         cls_token_ids = self.tokenizer.convert_tokens_to_ids(self.tokenizer.special_tokens_map["cls_token"])
 
+        if "xlm" in self.model_name:
+            prefix = "▁"
+        elif "bert" in self.model_name or "electra" in self.model_name:
+            prefix = "##"
+
         for entity, sentence in zip(entities, sentences):
             now_index = 0
             input_ids = [pad_token_ids] * (max_seq_length - 1)
@@ -147,7 +152,7 @@ class BaseDataloader(pl.LightningDataModule):
                         pre_syllable = "_"
                     if pre_syllable != "_":
                         if syllable not in [",", "."]:
-                            syllable = "##" + syllable  # 중간 음절에는 모두 prefix를 붙입니다. (',', '.'에 대해서는 prefix를 붙이지 않습니다.)
+                            syllable = prefix + syllable  # 중간 음절에는 모두 prefix를 붙입니다. (',', '.'에 대해서는 prefix를 붙이지 않습니다.)
                         # 이순신은 조선 -> [이, ##순, ##신, ##은, 조, ##선]
                     pre_syllable = syllable
 
@@ -166,7 +171,7 @@ class BaseDataloader(pl.LightningDataModule):
                     pre_syllable = syllable
                 if pre_syllable != "_":
                     if syllable not in [",", "."]:
-                        syllable = "##" + syllable  # 중간 음절에는 모두 prefix를 붙입니다. (',', '.'에 대해서는 prefix를 붙이지 않습니다.)
+                        syllable = prefix + syllable  # 중간 음절에는 모두 prefix를 붙입니다. (',', '.'에 대해서는 prefix를 붙이지 않습니다.)
                     # 이순신은 조선 -> [이, ##순, ##신, ##은, 조, ##선]
                 pre_syllable = syllable
 
