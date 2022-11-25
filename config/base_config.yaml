@@ -14,8 +14,10 @@ model:
   architecture: BaseModel
 
 tokenizer:
+  max_len: 256
   new_tokens: [<org>]
   new_special_tokens: []
+  syllable: False
 
 train:
   max_epoch: 1
