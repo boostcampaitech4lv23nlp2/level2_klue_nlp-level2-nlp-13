@@ -3,6 +3,7 @@ import pytorch_lightning as pl
 import pytz
 import torch
 import wandb
+import logging
 from data_loader.data_loaders import KfoldDataloader
 from pytorch_lightning.loggers import WandbLogger
 from utils import utils
@@ -17,7 +18,7 @@ def train(config):
     )
     dataloader, model = utils.new_instance(config)
     wandb_logger = WandbLogger()
-
+    #logger = logging.ge# console-logger
     save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
     trainer = pl.Trainer(
         accelerator="gpu",
@@ -42,10 +43,6 @@ def train(config):
             ),
         ],
     )
-    if config.dataloader.train_ratio == 1.0:
-        # disable validation and sanity check when the train data is used only for training
-        trainer.limit_val_batches = 0.0
-        trainer.num_sanity_val_steps = 0
 
     if config.path.ckpt_path is None:
         trainer.fit(model=model, datamodule=dataloader)
