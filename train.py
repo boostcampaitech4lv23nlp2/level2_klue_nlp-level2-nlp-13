@@ -17,8 +17,7 @@ def train(config):
         name=f"{config.wandb.name}_{config.wandb.info}_{now_time}",
     )
     dataloader, model = utils.new_instance(config)
-    wandb_logger = WandbLogger()
-    #logger = logging.ge# console-logger
+    wandb_logger = WandbLogger(log_model='all')
     save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
     trainer = pl.Trainer(
         accelerator="gpu",
