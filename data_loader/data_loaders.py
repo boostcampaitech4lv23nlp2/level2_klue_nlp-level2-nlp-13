@@ -170,13 +170,15 @@ class BaseDataloader(pl.LightningDataModule):
 
                 input_ids[now_index] = self.tokenizer.convert_tokens_to_ids(syllable)
                 attention_mask[now_index] = 1
-                token_type_ids[now_index] = 1
+                if "xlm" not in self.model_name:
+                    token_type_ids[now_index] = 1
                 now_index += 1
 
             input_ids = [cls_token_ids] + input_ids
             input_ids[now_index + 1] = sep_token_ids
             token_type_ids = [0] + token_type_ids
-            token_type_ids[now_index + 1] = 1
+            if "xlm" not in self.model_name:
+                token_type_ids[now_index + 1] = 1
             attention_mask = [1] + attention_mask
             attention_mask[now_index + 1] = 1
 
