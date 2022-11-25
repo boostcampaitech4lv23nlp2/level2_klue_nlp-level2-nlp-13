@@ -40,14 +40,13 @@ if __name__ == "__main__":
 
     if args.mode == "train" or args.mode == "t":
         if config.k_fold.use_k_fold:
-            train.k_train(args, config)
-
+            train.k_train(config)
         else:
-            train.train(args, config)
+            train.train(config)
 
     elif args.mode == "exp" or args.mode == "e":
         exp_count = int(input("실험할 횟수를 입력해주세요 "))
-        train.sweep(args, config, exp_count)
+        train.sweep(config, exp_count)
 
     elif args.mode == "inference" or args.mode == "i":
         if args.saved_model is None:
