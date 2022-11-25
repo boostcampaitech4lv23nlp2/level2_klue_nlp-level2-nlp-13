@@ -212,49 +212,9 @@ class KfoldDataloader(BaseDataloader):
             self.test_dataset = CustomDataset(test_inputs, test_targets)
             self.predict_dataset = CustomDataset(predict_inputs, predict_targets)
     
-    def train_dataloader(self):
-        return [DataLoader(
-            train_set,
-            batch_size=self.batch_size, 
-            shuffle=self.shuffle, 
-            collate_fn=self.batchify
-        )
-        for train_set in self.train_sets]
-
-    def val_dataloader(self):
-        return [DataLoader(
-            val_set,
-            batch_size=self.batch_size, 
-            shuffle=self.shuffle, 
-            collate_fn=self.batchify
-        )
-        for val_set in self.val_sets]
-
 class StratifiedDataloader(BaseDataloader):
-    def __init__(
-        self,
-        model_name,
-        batch_size,
-        train_ratio,
-        shuffle,
-        train_path,
-        test_path,
-        predict_path,
-        new_tokens=None,
-        new_special_tokens=None,
-    ):
-        super().__init__(
-            model_name=model_name,
-            batch_size=batch_size,
-            train_ratio=train_ratio,
-            shuffle=shuffle,
-            train_path=train_path,
-            test_path=test_path,
-            predict_path=predict_path,
-            new_tokens=new_tokens,
-            new_special_tokens=new_special_tokens,
-        )
-
+    def __init__(config):
+        super().__init__(config)
         assert self.train_ratio > 0.0 and self.train_ratio <1.0
 
     def setup(self, stage="fit"):
