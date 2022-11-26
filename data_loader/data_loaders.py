@@ -167,10 +167,10 @@ class BaseDataloader(pl.LightningDataModule):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, collate_fn=self.batchify)
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=self.batchify)
+        return DataLoader(self.test_dataset, collate_fn=self.batchify)
 
     def predict_dataloader(self):
-        return DataLoader(self.predict_dataset, batch_size=self.batch_size, collate_fn=self.batchify)
+        return DataLoader(self.predict_dataset, collate_fn=self.batchify)
     
     @property
     def new_vocab_size(self):
@@ -203,14 +203,13 @@ class KfoldDataloader(BaseKFoldDataModule, BaseDataloader):
             train_df = self.preprocess(train_data)
             self.train_dataset = CustomDataset(train_df)
 
-        else:
-            test_data = pd.read_csv(self.test_path)
+        test_data = pd.read_csv(self.test_path)
+        test_df = self.preprocess(test_data)
+        self.test_dataset = CustomDataset(test_df)
+
+        if stage == "predict":
             predict_data = pd.read_csv(self.predict_path)
-
-            test_df = self.preprocess(test_data)
             predict_df = self.preprocess(predict_data)
-
-            self.test_dataset = CustomDataset(test_df)
             self.predict_dataset = CustomDataset(predict_df)
     
     def setup_folds(self, num_folds) -> None:
@@ -227,12 +226,10 @@ class KfoldDataloader(BaseKFoldDataModule, BaseDataloader):
 
     def val_dataloader(self) -> DataLoader:
         return DataLoader(self.val_fold, batch_size=self.batch_size, collate_fn=self.batchify)
-
+    
     def test_dataloader(self) -> DataLoader:
+        print('========== test dataloader ================')
         return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=self.batchify)
-
-    def predict_dataloader(self) -> DataLoader:
-        return DataLoader(self.predict_dataset, collate_fn=self.batchify)
 
     def __post_init__(cls):
         super().__init__()

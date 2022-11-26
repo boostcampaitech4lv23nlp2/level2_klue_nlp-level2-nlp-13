@@ -9,7 +9,6 @@ import transformers
 import model.loss as loss_module
 
 from copy import deepcopy
-from dataclasses import dataclass
 from os import path
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type
@@ -128,24 +127,17 @@ class EnsembleVotingModel(pl.LightningModule):
         self.models = nn.ModuleList([model_cls.load_from_checkpoint(p) for p in checkpoint_paths])
         # self.test_acc = Accuracy()
 
-    # def test_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> None:
-    #     # Compute the averaged predictions over the `num_folds` models.
-    #     logits = torch.stack([m(batch[0]) for m in self.models]).mean(0)
-    #     loss = F.nll_loss(logits, batch[1])
-    #     self.test_acc(logits, batch[1])
-    #     self.log("test_acc", self.test_acc)
-    #     self.log("test_loss", loss)
-    def test_step(self, batch, batch_idx, dataloader_idx):
-        print('=========================================================')
+    def test_step(self, batch, batch_idx, dataloader_idx=0):
+        # Compute the averaged predictions over the `num_folds` models.
         tokens, labels = batch
         logits = torch.stack([m(tokens) for m in self.models]).mean(0)
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        self.log("test_f1", metrics["micro f1 score"])
-        self.log("test_auprc", metrics["auprc"])
-        self.log("test_acc", metrics["accuracy"])
+        self.log(f"ensemble/f1", metrics["micro f1 score"])
+        self.log(f"ensemble/auprc", metrics["auprc"])
+        self.log(f"ensemble/acc_fold", metrics["accuracy"])
 
-    def predict_step(self, batch, batch_idx):
+    def predict_step(self, batch, batch_idx, dataloader_idx):
         tokens, _ = batch
         logits = self(tokens)
 
