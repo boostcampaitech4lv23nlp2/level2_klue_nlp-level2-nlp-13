@@ -193,7 +193,7 @@ class KfoldDataloader(BaseKFoldDataModule, BaseDataloader):
         super().__init__(config)
 
         self.shuffle = config.dataloader.shuffle
-        self.num_splits = config.k_fold.num_splits
+        self.num_folds = config.k_fold.num_folds
         self.train_fold = None
         self.val_fold = None
         
