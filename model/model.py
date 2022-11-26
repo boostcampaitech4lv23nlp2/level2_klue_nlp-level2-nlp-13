@@ -69,9 +69,9 @@ class BaseModel(pl.LightningModule):
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        self.log("train_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
-        self.log("train_auprc", metrics["auprc"], on_step=True, prog_bar=True)
-        self.log("train_acc", metrics["accuracy"], on_step=True, prog_bar=True)
+        self.log("train/f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
+        self.log("train/auprc", metrics["auprc"], on_step=True, prog_bar=True)
+        self.log("train/acc", metrics["accuracy"], on_step=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -83,9 +83,9 @@ class BaseModel(pl.LightningModule):
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        self.log("val_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
-        self.log("val_auprc", metrics["auprc"], on_step=True, prog_bar=True)
-        self.log("val_acc", metrics["accuracy"], on_step=True, prog_bar=True)
+        self.log("val/f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
+        self.log("val/auprc", metrics["auprc"], on_step=True, prog_bar=True)
+        self.log("val/acc", metrics["accuracy"], on_step=True, prog_bar=True)
 
         return loss
 
@@ -95,9 +95,9 @@ class BaseModel(pl.LightningModule):
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        self.log("test_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
-        self.log("test_auprc", metrics["auprc"], on_step=True, prog_bar=True)
-        self.log("test_acc", metrics["accuracy"], on_step=True, prog_bar=True)
+        self.log(f"test/f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
+        self.log(f"test/auprc", metrics["auprc"], on_step=True, prog_bar=True)
+        self.log(f"test/acc", metrics["accuracy"], on_step=True, prog_bar=True)
 
     def predict_step(self, batch, batch_idx):
         tokens, _ = batch

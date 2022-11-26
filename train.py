@@ -33,33 +33,31 @@ def train(config):
         precision=config.utils.precision,
         num_sanity_val_steps=int(config.k_fold.use_k_fold is not True),
         callbacks=[
+            utils.best_save(
+            save_path=save_path,
+            top_k=config.utils.top_k,
+            monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+            mode=utils.monitor_config[config.utils.monitor]["mode"],
+            filename="{epoch}-{step}-{val_loss}-{val_f1}",
+            ),
             utils.early_stop(
                 monitor=utils.monitor_config[config.utils.monitor]["monitor"],
                 patience=config.utils.patience,
                 mode=utils.monitor_config[config.utils.monitor]["mode"],
             ),
-            utils.best_save(
-                save_path=save_path,
-                top_k=config.utils.top_k,
-                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-                mode=utils.monitor_config[config.utils.monitor]["mode"],
-                filename="{epoch}-{step}-{val_loss}-{val_f1}",
-            ),
         ],
     )
 
     if config.k_fold.use_k_fold:
+        # add kfold-specific fit loop, which also runs its own test loop
         internal_fit_loop = trainer.fit_loop
         trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path="./")
         trainer.fit_loop.connect(internal_fit_loop)
-    print('============= fit starts =============')
-    if config.path.ckpt_path is None:
-        trainer.fit(model=model, datamodule=dataloader)
-    else:
         trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)  
-    print('================ fit is done // test starts ===============')
-    if not config.k_Fold.use_k_fold:
+    else:
+        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
         trainer.test(model=model, datamodule=dataloader)
+
     wandb.finish()
     # trainer.checkpoint_callback.best_model_path
     # trainer.save_checkpoint(save_path + "model.ckpt")

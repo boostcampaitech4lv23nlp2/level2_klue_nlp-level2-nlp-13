@@ -83,9 +83,9 @@ def num_to_label(label):
 
 # 모니터링 할 쌍들
 monitor_config = {
-    "val_loss": {"monitor": "val_loss", "mode": "min"},
-    "val_pearson": {"monitor": "val_pearson", "mode": "max"},
-    "val_f1": {"monitor": "val_f1", "mode": "max"},
+    "val_loss": {"monitor": "val/loss", "mode": "min"},
+    "val_pearson": {"monitor": "val/pearson", "mode": "max"},
+    "val_f1": {"monitor": "val/f1", "mode": "max"},
 }
 
 
