@@ -5,7 +5,10 @@ import pandas as pd
 import pytorch_lightning as pl
 import torch
 import transformers
+
+from abc import ABC, abstractmethod
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.data.dataset import Subset
 from sklearn.model_selection import KFold, StratifiedShuffleSplit, train_test_split
 from tqdm.auto import tqdm
 
@@ -87,7 +90,7 @@ class BaseDataloader(pl.LightningDataModule):
     def batchify(self, batch):
         ''' data collator '''
         sentences, subject_entities, object_entities, labels = zip(*batch)
-
+        
         outs = self.tokenize(sentences, subject_entities, object_entities)
         labels = torch.tensor(labels)
         return outs, labels
@@ -174,41 +177,67 @@ class BaseDataloader(pl.LightningDataModule):
         return self.new_token_count + self.tokenizer.vocab_size
 
 
-class KfoldDataloader(BaseDataloader):
-    def __init__(self, k, config):
+class BaseKFoldDataModule(pl.LightningDataModule, ABC):
+    """Essential for KFoldDataloader"""
+    @abstractmethod
+    def setup_folds(self, num_folds: int) -> None:
+        pass
+
+    @abstractmethod
+    def setup_fold_index(self, fold_index: int) -> None:
+        pass
+
+
+class KfoldDataloader(BaseKFoldDataModule, BaseDataloader):
+    def __init__(self, config):
         super().__init__(config)
+
         self.shuffle = config.dataloader.shuffle
         self.num_splits = config.k_fold.num_splits
-        self.k = k
-
+        self.train_fold = None
+        self.val_fold = None
+        
     def setup(self, stage="fit"):
         if stage == "fit":
-            self.total_data = pd.read_csv(self.train_path)
-            kf = KFold(
-                    n_splits=self.num_splits,
-                    shuffle=self.shuffle,
-            )
-            self.train_sets, self.val_sets = [], []
-            for train_index, val_index in kf.split(self.total_data):
-                train_inputs, train_targets = self.preprocess(self.total_data.loc[train_index])
-                val_inputs, val_targets = self.preprocess(self.total_data.loc[val_index])
-
-                self.train_dataset = CustomDataset(train_inputs, train_targets)
-                self.val_dataset = CustomDataset(val_inputs, val_targets)
-
-                self.train_sets.append(self.train_dataset)
-                self.val_sets.append(self.val_dataset)
+            train_data = pd.read_csv(self.train_path)
+            train_df = self.preprocess(train_data)
+            self.train_dataset = CustomDataset(train_df)
 
         else:
             test_data = pd.read_csv(self.test_path)
             predict_data = pd.read_csv(self.predict_path)
 
-            test_inputs, test_targets = self.preprocess(test_data)
-            predict_inputs, predict_targets = self.preprocess(predict_data)
+            test_df = self.preprocess(test_data)
+            predict_df = self.preprocess(predict_data)
 
-            self.test_dataset = CustomDataset(test_inputs, test_targets)
-            self.predict_dataset = CustomDataset(predict_inputs, predict_targets)
+            self.test_dataset = CustomDataset(test_df)
+            self.predict_dataset = CustomDataset(predict_df)
     
+    def setup_folds(self, num_folds) -> None:
+        self.num_folds = num_folds
+        self.splits = [split for split in KFold(num_folds).split(range(len(self.train_dataset)))]
+
+    def setup_fold_index(self, fold_index) -> None:
+        train_indices, val_indices = self.splits[fold_index]
+        self.train_fold = Subset(self.train_dataset, train_indices)
+        self.val_fold = Subset(self.train_dataset, val_indices)
+
+    def train_dataloader(self) -> DataLoader:
+        return DataLoader(self.train_fold, batch_size=self.batch_size, shuffle=self.shuffle, collate_fn=self.batchify)
+
+    def val_dataloader(self) -> DataLoader:
+        return DataLoader(self.val_fold, batch_size=self.batch_size, collate_fn=self.batchify)
+
+    def test_dataloader(self) -> DataLoader:
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=self.batchify)
+
+    def predict_dataloader(self) -> DataLoader:
+        return DataLoader(self.predict_dataset, collate_fn=self.batchify)
+
+    def __post_init__(cls):
+        super().__init__()
+
+
 class StratifiedDataloader(BaseDataloader):
     def __init__(self, config):
         super().__init__(config)

@@ -39,10 +39,11 @@ if __name__ == "__main__":
     torch.use_deterministic_algorithms(True)
 
     if args.mode == "train" or args.mode == "t":
-        if config.k_fold.use_k_fold:
-            train.k_train(config)
-        else:
-            train.train(config)
+        train.train(config)
+        # if config.k_fold.use_k_fold:
+        #     train.k_train(config)
+        # else:
+        #     train.train(config)
 
     elif args.mode == "exp" or args.mode == "e":
         exp_count = int(input("실험할 횟수를 입력해주세요 "))

@@ -10,7 +10,7 @@ def inference(args, conf):
     dataloader, model = utils.new_instance(conf)
     model, _, __ = utils.load_model(args, conf, dataloader, model)
 
-    output = trainer.predict(model=model, datamodule=dataloader)
+    output = trainer.predict(model=model, datamodule=dataloader) # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html
     pred_answer, output_prob = zip(*output)
     pred_answer = np.concatenate(pred_answer).tolist()
     output_prob = np.concatenate(output_prob, axis=0).tolist()
