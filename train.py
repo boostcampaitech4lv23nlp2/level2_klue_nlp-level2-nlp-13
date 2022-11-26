@@ -52,14 +52,11 @@ def train(config):
         internal_fit_loop = trainer.fit_loop
         trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path="./")
         trainer.fit_loop.connect(internal_fit_loop)
-    print('============= fit starts =============')
-    if config.path.ckpt_path is None:
-        trainer.fit(model=model, datamodule=dataloader)
-    else:
         trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)  
-    print('================ fit is done // test starts ===============')
-    if not config.k_Fold.use_k_fold:
+    else:
+        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
         trainer.test(model=model, datamodule=dataloader)
+        
     wandb.finish()
     # trainer.checkpoint_callback.best_model_path
     # trainer.save_checkpoint(save_path + "model.ckpt")
