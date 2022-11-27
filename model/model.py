@@ -69,9 +69,9 @@ class BaseModel(pl.LightningModule):
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        self.log("train_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
-        self.log("train_auprc", metrics["auprc"], on_step=True, prog_bar=True)
-        self.log("train_acc", metrics["accuracy"], on_step=True, prog_bar=True)
+        self.log("train_f1", metrics["micro f1 score"], on_step=True, on_epoch=False, prog_bar=True)
+        self.log("train_auprc", metrics["auprc"], on_step=True, on_epoch=False, prog_bar=True)
+        self.log("train_acc", metrics["accuracy"], on_step=True, on_epoch=False, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -83,9 +83,9 @@ class BaseModel(pl.LightningModule):
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        self.log("val_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
-        self.log("val_auprc", metrics["auprc"], on_step=True, prog_bar=True)
-        self.log("val_acc", metrics["accuracy"], on_step=True, prog_bar=True)
+        self.log("val_f1", metrics["micro f1 score"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
+        self.log("val_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
+        self.log("val_acc", metrics["accuracy"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
 
         return loss
 
@@ -95,10 +95,10 @@ class BaseModel(pl.LightningModule):
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        fold_idx = self.trainer.fit_loop.current_fold
-        self.log(f"test_fold{fold_idx}_f1", metrics["micro f1 score"], on_step=False, prog_bar=True)
-        self.log(f"test_fold{fold_idx}_auprc", metrics["auprc"], on_step=False, prog_bar=True)
-        self.log(f"test_fold{fold_idx}_acc", metrics["accuracy"], on_step=False, prog_bar=True)
+    
+        self.log(f"test_f1", metrics["micro f1 score"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
+        self.log(f"test_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
+        self.log(f"test_acc", metrics["accuracy"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
 
     def predict_step(self, batch, batch_idx):
         tokens, _ = batch

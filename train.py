@@ -23,6 +23,7 @@ def train(config):
 
     wandb_logger = WandbLogger(log_model='all')
     save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
+    wandb_logger.experiment.config.update({"save_dir":save_path+"logs/"})
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
@@ -34,15 +35,15 @@ def train(config):
         num_sanity_val_steps=int(config.k_fold.use_k_fold is not True),
         callbacks=[
             utils.early_stop(
-                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                monitor=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["monitor"],
+                mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
                 patience=config.utils.patience,
-                mode=utils.monitor_config[config.utils.monitor]["mode"],
             ),
             utils.best_save(
                 save_path=save_path,
                 top_k=config.utils.top_k,
-                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-                mode=utils.monitor_config[config.utils.monitor]["mode"],
+                monitor=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["monitor"],
+                mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
                 filename="{epoch}-{step}-{val_loss}-{val_f1}",
             ),
         ] if not config.k_fold.use_k_fold else [
