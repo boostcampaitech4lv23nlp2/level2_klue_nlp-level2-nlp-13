@@ -138,7 +138,7 @@ class EnsembleVotingModel(pl.LightningModule):
         self.log(f"ensemble_auprc", metrics["auprc"])
         self.log(f"ensemble_acc_fold", metrics["accuracy"])
 
-    def predict_step(self, batch, batch_idx, dataloader_idx):
+    def predict_step(self, batch, batch_idx, dataloader_idx=0):
         tokens, _ = batch
         logits = self(tokens)
 

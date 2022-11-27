@@ -23,6 +23,7 @@ def best_save(save_path, top_k, monitor, mode, filename):
     )
     return checkpoint_callback
 
+
 def new_instance(config):
     dataloader = getattr(datamodule_arch, config.dataloader.architecture)(config)
     model = getattr(module_arch, config.model.architecture)(config, dataloader.new_vocab_size)

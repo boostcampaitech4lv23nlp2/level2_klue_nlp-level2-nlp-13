@@ -3,7 +3,7 @@ path:
   test_path: ./data/raw_data/train.csv
   predict_path: ./data/raw_data/test_data.csv
   save_path: saved_models/
-  ckpt_path: [] # checkpoint path for resuming training
+  resume_path: # checkpoint path for resuming training
 
 dataloader:
   shuffle: True
@@ -37,7 +37,12 @@ utils:
 k_fold:
   use_k_fold: False
   num_folds: 3
-  
+
+ensemble:
+  use_ensemble: False
+  architecture: EnsembleVotingModel
+  ckpt_paths: []
+
 wandb:
   team_account_name: next-level-potato # 팀 계정
   project_repo: RE  # 프로젝트 레포 이름
