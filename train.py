@@ -34,6 +34,13 @@ def train(config):
         precision=config.utils.precision,
         num_sanity_val_steps=int(config.k_fold.use_k_fold is not True),
         callbacks=[
+            utils.best_save(
+            save_path=save_path,
+            top_k=config.utils.top_k,
+            monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+            mode=utils.monitor_config[config.utils.monitor]["mode"],
+            filename="{epoch}-{step}-{val_loss}-{val_f1}",
+            ),
             utils.early_stop(
                 monitor=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["monitor"],
                 mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],

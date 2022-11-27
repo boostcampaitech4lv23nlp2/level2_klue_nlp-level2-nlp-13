@@ -208,7 +208,8 @@ class KfoldDataloader(BaseKFoldDataModule, BaseDataloader):
         self.num_folds = config.k_fold.num_folds
         self.train_fold = None
         self.val_fold = None
-        
+        self.fold_index = None
+
     def setup(self, stage="fit"):
         if stage == "fit":
             train_data = pd.read_csv(self.train_path)
@@ -229,7 +230,8 @@ class KfoldDataloader(BaseKFoldDataModule, BaseDataloader):
         self.splits = [split for split in KFold(num_folds).split(range(len(self.train_dataset)))]
 
     def setup_fold_index(self, fold_index) -> None:
-        train_indices, val_indices = self.splits[fold_index]
+        self.fold_index = fold_index
+        train_indices, val_indices = self.splits[self.fold_index]
         self.train_fold = Subset(self.train_dataset, train_indices)
         self.val_fold = Subset(self.train_dataset, val_indices)
 
