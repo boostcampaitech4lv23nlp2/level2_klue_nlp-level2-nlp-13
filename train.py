@@ -56,6 +56,7 @@ def train(config):
     )
 
     if config.k_fold.use_k_fold:
+        assert config.utils.patience >= config.k_fold.num_folds, "The given 'config.utils.patience' is way too low."
         internal_fit_loop = trainer.fit_loop
         trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=save_path)
         trainer.fit_loop.connect(internal_fit_loop)

@@ -79,7 +79,7 @@ class BaseModel(pl.LightningModule):
         logits = self(tokens)
 
         loss = self.loss_func(logits, labels.long(), self.config)
-        self.log("val_loss", loss, on_step=True, prog_bar=True)
+        self.log("val_loss", loss, on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
