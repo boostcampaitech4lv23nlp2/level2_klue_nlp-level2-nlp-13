@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 import torch
 import transformers
 
+from functools import partial
 from abc import ABC, abstractmethod
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.dataset import Subset
@@ -161,17 +162,28 @@ class BaseDataloader(pl.LightningDataModule):
             self.predict_dataset = CustomDataset(predict_df)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, collate_fn=self.batchify)
+        return self.make_dataloader(self.train_dataset, shuffle=self.shuffle)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, collate_fn=self.batchify)
+        return self.make_dataloader(self.val_dataset)
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, collate_fn=self.batchify)
+        return self.make_dataloader(self.test_dataset) 
 
     def predict_dataloader(self):
-        return DataLoader(self.predict_dataset, collate_fn=self.batchify)
+        return self.make_dataloader(self.predict_dataset)
     
+    def make_dataloader(self):
+        num_cpus = os.cpu_counts()
+        # set num_workers as many as the number of cpus unless the batch size is too big
+        num_workers = num_cpus if self.batch_size//num_cpus <= num_cpus else int((self.batch_size//num_cpus) ** 0.5)
+        return partial(
+            DataLoader,
+            batch_size=self.batch_size,
+            collate_fn=self.batchify,
+            num_workers=num_workers,
+        )
+
     @property
     def new_vocab_size(self):
         return self.new_token_count + self.tokenizer.vocab_size
