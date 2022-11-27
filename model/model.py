@@ -196,6 +196,7 @@ class KFoldLoop(Loop):
     def on_advance_end(self) -> None:
         """Used to save the weights of the current fold and reset the LightningModule and its optimizers."""
         self.trainer.save_checkpoint(path.join(self.export_path, f"fold_{self.current_fold}.ckpt"))
+        
         # restore the original weights + optimizers and schedulers.
         self.trainer.lightning_module.load_state_dict(self.lightning_module_state_dict)
         self.trainer.strategy.setup_optimizers(self.trainer)
