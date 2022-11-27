@@ -95,9 +95,10 @@ class BaseModel(pl.LightningModule):
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        self.log("test_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
-        self.log("test_auprc", metrics["auprc"], on_step=True, prog_bar=True)
-        self.log("test_acc", metrics["accuracy"], on_step=True, prog_bar=True)
+        fold_idx = self.trainer.datamodule.current_fold
+        self.log(f"test_fold{fold_idx}_f1", metrics["micro f1 score"], on_step=False, prog_bar=True)
+        self.log(f"test_fold{fold_idx}_auprc", metrics["auprc"], on_step=False, prog_bar=True)
+        self.log(f"test_fold{fold_idx}_acc", metrics["accuracy"], on_step=False, prog_bar=True)
 
     def predict_step(self, batch, batch_idx):
         tokens, _ = batch
