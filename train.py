@@ -48,9 +48,9 @@ def train(config):
             ),
         ] if not config.k_fold.use_k_fold else [
             utils.early_stop(
-                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                monitor=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["monitor"],
+                mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
                 patience=config.utils.patience,
-                mode=utils.monitor_config[config.utils.monitor]["mode"],
             )
         ],
     )
