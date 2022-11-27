@@ -6,7 +6,6 @@ import pytorch_lightning as pl
 import torch
 import transformers
 
-from functools import partial
 from abc import ABC, abstractmethod
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.dataset import Subset
@@ -39,6 +38,9 @@ class BaseDataloader(pl.LightningDataModule):
         self.shuffle = config.dataloader.shuffle
         self.new_tokens = list(config.tokenizer.new_tokens)
         self.new_special_tokens = list(config.tokenizer.new_special_tokens)
+
+        num_cpus = os.cpu_count()
+        self.num_workers = num_cpus if self.batch_size//num_cpus <= num_cpus else int((self.batch_size//num_cpus) ** 0.5)
 
         self.train_path = config.path.train_path
         self.test_path = config.path.test_path
@@ -162,27 +164,16 @@ class BaseDataloader(pl.LightningDataModule):
             self.predict_dataset = CustomDataset(predict_df)
 
     def train_dataloader(self):
-        return self.make_dataloader(self.train_dataset, shuffle=self.shuffle)
+        return DataLoader(self.train_dataset, shuffle=self.shuffle, batch_size=self.batch_size, collate_fn=self.batchify, num_workers=self.num_workers,)
 
     def val_dataloader(self):
-        return self.make_dataloader(self.val_dataset)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, collate_fn=self.batchify, num_workers=self.num_workers,)
 
     def test_dataloader(self):
-        return self.make_dataloader(self.test_dataset) 
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=self.batchify, num_workers=self.num_workers,)
 
     def predict_dataloader(self):
-        return self.make_dataloader(self.predict_dataset)
-    
-    def make_dataloader(self):
-        num_cpus = os.cpu_counts()
-        # set num_workers as many as the number of cpus unless the batch size is too big
-        num_workers = num_cpus if self.batch_size//num_cpus <= num_cpus else int((self.batch_size//num_cpus) ** 0.5)
-        return partial(
-            DataLoader,
-            batch_size=self.batch_size,
-            collate_fn=self.batchify,
-            num_workers=num_workers,
-        )
+        return DataLoader(self.predict_dataset, batch_size=self.batch_size, collate_fn=self.batchify, num_workers=self.num_workers,)
 
     @property
     def new_vocab_size(self):
