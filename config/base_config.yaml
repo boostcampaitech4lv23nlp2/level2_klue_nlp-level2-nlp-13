@@ -3,7 +3,7 @@ path:
   test_path: ./data/raw_data/train.csv
   predict_path: ./data/raw_data/test_data.csv
   save_path: saved_models/
-  ckpt_path: # checkpoint path for resuming training
+  ckpt_path: [] # checkpoint path for resuming training
 
 dataloader:
   shuffle: True

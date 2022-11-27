@@ -68,10 +68,10 @@ def train(config):
         internal_fit_loop = trainer.fit_loop
         trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=save_path)
         trainer.fit_loop.connect(internal_fit_loop)
-        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)  
+        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path[0])  
     else:
-        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
-        trainer.test(model=model, datamodule=dataloader)
+        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path[0])
+        trainer.test(model=model, datamodule=dataloader) # K-fold CV runs test_step internally as part of fitting step
         
     wandb.finish()
     # trainer.checkpoint_callback.best_model_path
