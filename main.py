@@ -54,6 +54,11 @@ if __name__ == "__main__":
             print("경로를 입력해주세요")
         else:
             inference.inference(args, config)
+
+    elif args.mode == "ensemble":
+        import ensemble
+        ensemble.inference(args, config)
+        
     else:
         print("모드를 다시 설정해주세요 ")
         print("train     : t,\ttrain")

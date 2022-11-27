@@ -140,7 +140,7 @@ class EnsembleVotingModel(pl.LightningModule):
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         tokens, _ = batch
-        logits = self(tokens)
+        logits = torch.stack([m(tokens) for m in self.models]).mean(0)
 
         self.output_pred = np.argmax(logits.detach().cpu().numpy(), axis=-1)
         self.output_prob = nn.functional.softmax(logits, dim=-1).detach().cpu().numpy()
