@@ -5,10 +5,10 @@ import pytorch_lightning as pl
 from utils import utils
 
 
-def inference(args, conf):
-    trainer = pl.Trainer(gpus=1, max_epochs=conf.train.max_epoch, log_every_n_steps=1)
-    dataloader, model = utils.new_instance(conf)
-    model, _, __ = utils.load_model(args, conf, dataloader, model)
+def inference(args, config):
+    trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1)
+    dataloader, model = utils.new_instance(config)
+    model, _, __ = utils.load_model(args, config, dataloader, model)
 
     output = trainer.predict(model=model, datamodule=dataloader) # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html
     pred_answer, output_prob = zip(*output)
