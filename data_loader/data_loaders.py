@@ -228,8 +228,10 @@ class KfoldDataloader(BaseKFoldDataModule, BaseDataloader):
         return DataLoader(self.val_fold, batch_size=self.batch_size, collate_fn=self.batchify)
     
     def test_dataloader(self) -> DataLoader:
-        print('========== test dataloader ================')
         return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=self.batchify)
+
+    def predict_dataloader(self) -> DataLoader:
+        return DataLoader(self.predict_dataset, collate_fn=self.batchify)
 
     def __post_init__(cls):
         super().__init__()

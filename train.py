@@ -45,12 +45,18 @@ def train(config):
                 mode=utils.monitor_config[config.utils.monitor]["mode"],
                 filename="{epoch}-{step}-{val_loss}-{val_f1}",
             ),
+        ] if not config.k_fold.use_k_fold else [
+            utils.early_stop(
+                monitor=utils.monitor_config[config.utils.monitor]["monitor"],
+                patience=config.utils.patience,
+                mode=utils.monitor_config[config.utils.monitor]["mode"],
+            )
         ],
     )
 
     if config.k_fold.use_k_fold:
         internal_fit_loop = trainer.fit_loop
-        trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path="./")
+        trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=save_path)
         trainer.fit_loop.connect(internal_fit_loop)
         trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)  
     else:

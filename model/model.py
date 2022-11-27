@@ -95,7 +95,7 @@ class BaseModel(pl.LightningModule):
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        fold_idx = self.trainer.datamodule.current_fold
+        fold_idx = self.trainer.fit_loop.current_fold
         self.log(f"test_fold{fold_idx}_f1", metrics["micro f1 score"], on_step=False, prog_bar=True)
         self.log(f"test_fold{fold_idx}_auprc", metrics["auprc"], on_step=False, prog_bar=True)
         self.log(f"test_fold{fold_idx}_acc", metrics["accuracy"], on_step=False, prog_bar=True)
@@ -195,21 +195,22 @@ class KFoldLoop(Loop):
 
     def on_advance_end(self) -> None:
         """Used to save the weights of the current fold and reset the LightningModule and its optimizers."""
-        self.trainer.save_checkpoint(path.join(self.export_path, f"model.{self.current_fold}.pt"))
+        self.trainer.save_checkpoint(path.join(self.export_path, f"fold_{self.current_fold}.ckpt"))
         # restore the original weights + optimizers and schedulers.
         self.trainer.lightning_module.load_state_dict(self.lightning_module_state_dict)
         self.trainer.strategy.setup_optimizers(self.trainer)
         self.replace(fit_loop=FitLoop)
 
     def on_run_end(self) -> None:
-        """Used to compute the performance of the ensemble model on the test set."""
-        checkpoint_paths = [path.join(self.export_path, f"model.{f_idx + 1}.pt") for f_idx in range(self.num_folds)]
-        voting_model = EnsembleVotingModel(type(self.trainer.lightning_module), checkpoint_paths)
-        voting_model.trainer = self.trainer
-        # This requires to connect the new model and move it the right device.
-        self.trainer.strategy.connect(voting_model)
-        self.trainer.strategy.model_to_device()
-        self.trainer.test_loop.run()
+        """Used to compute the performance of the ensemble model on the test set. Run Ensemble.test_loop when there is a test-specific set"""
+        checkpoint_paths = [path.join(self.export_path, f"fold_{f_idx + 1}.ckpt") for f_idx in range(self.num_folds)]
+        if self.trainer.datamodule.train_path != self.trainer.datamodule.test_path:
+            voting_model = EnsembleVotingModel(type(self.trainer.lightning_module), checkpoint_paths)
+            voting_model.trainer = self.trainer
+            # This requires to connect the new model and move it the right device.
+            self.trainer.strategy.connect(voting_model)
+            self.trainer.strategy.model_to_device()
+            self.trainer.test_loop.run()
 
     def on_save_checkpoint(self) -> Dict[str, int]:
         return {"current_fold": self.current_fold}
