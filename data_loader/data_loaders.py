@@ -53,15 +53,11 @@ class BaseDataloader(pl.LightningDataModule):
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         self.max_length = config.tokenizer.max_length
         self.new_tokens = list(config.tokenizer.new_tokens)
-        self.new_special_tokens = list(config.tokenizer.new_special_tokens)
 
         self.new_token_count = 0
         if self.new_tokens != []:
-            self.new_token_count += self.tokenizer.add_tokens(self.new_tokens, special_tokens=False)
-        if self.new_special_tokens != []:
-            self.new_token_count += self.tokenizer.add_tokens(self.new_special_tokens, special_tokens=True) 
-        if self.new_token_count > 0:
-            print(f"{self.new_token_count} tokens are newly added to the vocabulary.")
+            self.new_token_count += self.tokenizer.add_tokens(self.new_tokens)
+            print(f"{self.new_token_count} new token(s) are added to the vocabulary.")
     
     def batchify(self, batch):
         """data collator"""
