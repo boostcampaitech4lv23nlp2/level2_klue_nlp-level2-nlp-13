@@ -146,7 +146,7 @@ class MultipleHeadRobertaModel(BaseModel):
 
         return loss   
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx): # 😰
         #input_ids, _ , attention_mask, labels, is_relation_labels = batch
         tokens, labels, is_relation_labels  = batch # 😰
         input_ids= tokens['input_ids'] # 😰
