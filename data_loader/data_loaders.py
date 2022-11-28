@@ -4,11 +4,11 @@ import re
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-import transformers
 
 from abc import ABC, abstractmethod
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.dataset import Subset
+from transformers import AutoTokenizer
 from sklearn.model_selection import KFold, StratifiedShuffleSplit, train_test_split
 from tqdm.auto import tqdm
 
@@ -36,8 +36,6 @@ class BaseDataloader(pl.LightningDataModule):
         self.batch_size = config.train.batch_size
         self.train_ratio = config.dataloader.train_ratio
         self.shuffle = config.dataloader.shuffle
-        self.new_tokens = list(config.tokenizer.new_tokens)
-        self.new_special_tokens = list(config.tokenizer.new_special_tokens)
 
         num_cpus = os.cpu_count()
         self.num_workers = num_cpus if self.batch_size//num_cpus <= num_cpus else int((self.batch_size//num_cpus) ** 0.5)
@@ -52,46 +50,21 @@ class BaseDataloader(pl.LightningDataModule):
         self.predict_dataset = None
 
         assert isinstance(self.train_ratio, float) and self.train_ratio > 0.0 and self.train_ratio <= 1.0
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.max_length = config.tokenizer.max_length
+        self.new_tokens = list(config.tokenizer.new_tokens)
+        self.new_special_tokens = list(config.tokenizer.new_special_tokens)
 
-        model_list = {
-            "bert": [
-                "klue/roberta-small",
-                "klue/roberta-base",
-                "klue/roberta-large",
-            ],
-            "electra": [
-                "monologg/koelectra-base-v3-discriminator",
-                "monologg/koelectra-base-finetuned-sentiment",
-            ],
-            "roberta": [
-                "sentence-transformers/roberta-base-nli-stsb-mean-tokens",
-                "jhgan/ko-sroberta-multitask",
-            ],
-            "funnel": [
-                "kykim/funnel-kor-base",
-            ],
-        }
-
-        if self.model_name in model_list["bert"]:
-            self.tokenizer = transformers.BertTokenizer.from_pretrained(self.model_name)
-        elif self.model_name in model_list["electra"]:
-            self.tokenizer = transformers.ElectraTokenizer.from_pretrained(self.model_name)
-        elif self.model_name in model_list["roberta"]:
-            self.tokenizer = transformers.RobertaTokenizer.from_pretrained(self.model_name)
-        elif self.model_name in model_list["funnel"]:
-            self.tokenizer = transformers.FunnelTokenizer.from_pretrained(self.model_name)
-        else:
-            self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_name)
-
-        # self.tokenizer.model_max_length = 256
         self.new_token_count = 0
         if self.new_tokens != []:
             self.new_token_count += self.tokenizer.add_tokens(self.new_tokens, special_tokens=False)
         if self.new_special_tokens != []:
             self.new_token_count += self.tokenizer.add_tokens(self.new_special_tokens, special_tokens=True) 
+        if self.new_token_count > 0:
+            print(f"{self.new_token_count} tokens are newly added to the vocabulary.")
     
     def batchify(self, batch):
-        ''' data collator '''
+        """data collator"""
         sentences, subject_entities, object_entities, labels = zip(*batch)
         
         outs = self.tokenize(sentences, subject_entities, object_entities)
@@ -103,7 +76,6 @@ class BaseDataloader(pl.LightningDataModule):
         tokenizer로 과제에 따라 tokenize 
         """
         sep_token = self.tokenizer.special_tokens_map["sep_token"]
-
         concat_entity = [e01 + sep_token + e02 for e01, e02 in zip(subject_entities, object_entities)]
 
         tokens = self.tokenizer(
@@ -113,7 +85,7 @@ class BaseDataloader(pl.LightningDataModule):
             padding="longest",
             truncation=True,
             return_tensors="pt",
-            max_length=256,
+            max_length=self.max_length,
         )
 
         return tokens
