@@ -26,6 +26,8 @@ train:
   loss: ce
   label_smoothing: 0.1
   use_frozen: False
+  optimizer: AdamW
+  scheduler: StepLR
   
 utils:
   seed: 42

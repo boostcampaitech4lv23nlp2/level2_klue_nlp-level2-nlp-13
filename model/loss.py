@@ -34,6 +34,23 @@ def CELoss(output, target, conf=None):
     loss_func = nn.CrossEntropyLoss(label_smoothing=conf.train.label_smoothing)
     return loss_func(output, target)
 
+def FocalLoss(output, target, conf=None):
+    alpha = 1
+    gamma = 2
+    loss_func = nn.CrossEntropyLoss()(output, target)
+    pt = torch.exp(-loss_func)
+    F_loss = alpha * (1 - pt) ** gamma * loss_func
+
+    return torch.mean(F_loss)
+
+def HuberLoss(output, target, conf=None):
+    loss_func = nn.HuberLoss()
+    return loss_func(output, target)
+
+def SmoothL1Loss(output, target, conf=None):
+    loss_func = nn.SmoothL1Loss()
+    return loss_func(output, target)
+
 
 # fmt: off
 def klue_re_micro_f1(preds, labels):
@@ -92,4 +109,7 @@ loss_config = {
     "rmse": rmse_loss,
     "bce": BCEWithLogitsLoss,
     "ce": CELoss,
+    "focal": FocalLoss,
+    "huber": HuberLoss,
+    "smooth": SmoothL1Loss,
 }

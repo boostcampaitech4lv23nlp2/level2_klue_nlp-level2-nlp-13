@@ -37,6 +37,13 @@ class BaseModel(pl.LightningModule):
         if self.config.train.use_frozen == True:
             self.freeze()
         self.plm.resize_token_embeddings(new_vocab_size)
+
+        self.plm.config.type_vocab_size = 2
+        # Create a new Embeddings layer, with 2 possible segments IDs instead of 1
+        self.plm.roberta.embeddings.token_type_embeddings = nn.Embedding(2, self.plm.config.hidden_size)
+        # Initialize it
+        self.plm.roberta.embeddings.token_type_embeddings.weight.data.normal_(mean=0.0, std=self.plm.config.initializer_range)
+
         print(self.plm.__dict__)
         self.loss_func = loss_module.loss_config[self.config.train.loss]
 
@@ -112,8 +119,21 @@ class BaseModel(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
+        if self.config.train.optimizer == "AdamW":
+            optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
+        elif self.config.train.optimizer == "Adam":
+            optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
-        return optimizer
+        if self.config.train.scheduler == "StepLR":
+            scheduler = torch.optim.lr_scheduler.StepLR(
+                optimizer, step_size=10, gamma=0.5
+            )
+        elif self.config.train.scheduler == "LambdaLR":
+            scheduler = torch.optim.lr_scheduler.LambdaLR(
+                optimizer, lr_lambda=lambda epoch: 0.95**epoch
+            )
+
+        return [optimizer], [scheduler]
 
 
 class CustomModel(BaseModel):

@@ -204,3 +204,5 @@ outputs/
 
 data/*
 prediction/
+best_model/
+klue-roberta-retrained/
