@@ -67,12 +67,14 @@ class BaseDataloader(pl.LightningDataModule):
         labels = torch.tensor(labels)
         return outs, labels
 
+
     def tokenize(self, sentences, subject_entities, object_entities):
         """
         tokenizer로 과제에 따라 tokenize 
         """
         sep_token = self.tokenizer.special_tokens_map["sep_token"]
         concat_entity = [e01 + sep_token + e02 for e01, e02 in zip(subject_entities, object_entities)]
+
 
         tokens = self.tokenizer(
             concat_entity,
@@ -85,6 +87,8 @@ class BaseDataloader(pl.LightningDataModule):
         )
 
         return tokens
+    
+
 
     def preprocess(self, df):
         from utils.utils import label_to_num
@@ -102,6 +106,7 @@ class BaseDataloader(pl.LightningDataModule):
             df['label'] = num_labels
         
         return df
+
 
     def setup(self, stage="fit"):
         if stage == "fit":
@@ -146,6 +151,7 @@ class BaseDataloader(pl.LightningDataModule):
     @property
     def new_vocab_size(self):
         return self.new_token_count + self.tokenizer.vocab_size
+
 
 
 class BaseKFoldDataModule(pl.LightningDataModule, ABC):
