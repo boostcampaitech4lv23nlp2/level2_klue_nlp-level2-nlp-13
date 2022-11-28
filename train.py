@@ -64,7 +64,7 @@ def train(config):
         trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)  
     else:
         trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
-        # trainer.test(model=model, datamodule=dataloader) # K-fold CV runs test_step internally as part of fitting step
+        trainer.test(model=model, datamodule=dataloader) # K-fold CV runs test_step internally as part of fitting step
         
     wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
