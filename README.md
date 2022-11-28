@@ -29,26 +29,25 @@ pip install -r requirements.txt
 
 ### 학습
 ```bash
-python main.py
-python main.py -c "base_config"
-python main.py -m t -c "base_config"
+python main.py -c "custom_config" # ./config/custom_config.yaml 을 이용할 시 
+python main.py -m t -c "custom_config"
+python main.py --mode train --config "custom_config"
 ```
 
 ### 추가 학습
+추가 학습을 하려면 기존 모델의 체크포인트를 path.resume_path에 추가하시면 됩니다 (기타 위와 동일).
 ```bash
-python main.py -m ct -s "save_models/klue/bert-base.ckpt"
-python main.py -m ct -s "save_models/klue/bert-base.ckpt" -c "base_config"
+python main.py -m t -c "custom_config"
 ```
 
-### inference
+### 추론
 ```bash
 # 실행 시 prediction 폴더에 submission.csv가 생성됨
-python main.py -m i -s "save_models/klue/bert-base.ckpt"
-python main.py -m i -s "save_models/klue/bert-base.ckpt" -c "base_config"
+python main.py -m i -s "saved_models/klue/bert-base.ckpt"
+python main.py -m i -s "saved_models/klue/bert-base.ckpt" -c "custom_config"
 ```
 
 ### TODO
 - [ ] auprc warning 확인
 - [ ] focal loss
 - [ ] confusion matrix
-- [ ] K-Fold
