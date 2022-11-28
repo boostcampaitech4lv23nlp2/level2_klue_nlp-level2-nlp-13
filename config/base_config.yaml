@@ -18,6 +18,7 @@ tokenizer:
   new_tokens: []
   new_special_tokens: []
   max_length: 256
+  syllable: False
 
 train:
   max_epoch: 1
