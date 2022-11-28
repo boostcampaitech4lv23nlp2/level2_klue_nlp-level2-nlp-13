@@ -34,13 +34,6 @@ def train(config):
         precision=config.utils.precision,
         num_sanity_val_steps=int(config.k_fold.use_k_fold is not True),
         callbacks=[
-            utils.best_save(
-            save_path=save_path,
-            top_k=config.utils.top_k,
-            monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-            mode=utils.monitor_config[config.utils.monitor]["mode"],
-            filename="{epoch}-{step}-{val_loss}-{val_f1}",
-            ),
             utils.early_stop(
                 monitor=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["monitor"],
                 mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
@@ -68,9 +61,9 @@ def train(config):
         internal_fit_loop = trainer.fit_loop
         trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=save_path)
         trainer.fit_loop.connect(internal_fit_loop)
-        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path[0])  
+        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)  
     else:
-        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path[0])
+        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
         trainer.test(model=model, datamodule=dataloader) # K-fold CV runs test_step internally as part of fitting step
         
     wandb.finish()
