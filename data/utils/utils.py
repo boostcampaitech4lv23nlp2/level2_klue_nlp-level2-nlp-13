@@ -63,7 +63,7 @@ def add_special_tokens(marker_type, tokenizer):
     return added_token_num, tokenizer
 
 
-def mark_entity(marker_type, word, word_type, is_subj):
+def mark_entity(marker_type, word, word_type, is_subj):  # sourcery skip: switch
     """입력한 word에 marker_type에 따른 special token 추가
 
     Args:

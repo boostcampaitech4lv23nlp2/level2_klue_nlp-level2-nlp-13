@@ -11,6 +11,7 @@ from torch.utils.data.dataset import Subset
 from transformers import AutoTokenizer
 from sklearn.model_selection import KFold, StratifiedShuffleSplit, train_test_split
 from tqdm.auto import tqdm
+from data.utils.utils import add_special_tokens
 
 class CustomDataset(Dataset):
 
@@ -58,6 +59,14 @@ class BaseDataloader(pl.LightningDataModule):
         if self.new_tokens != []:
             self.new_token_count += self.tokenizer.add_tokens(self.new_tokens)
             print(f"{self.new_token_count} new token(s) are added to the vocabulary.")
+
+        self.new_special_token_count = 0
+        if config.data_preprocess.marker_type and config.data_preprocess.marker_type in config.path.train_path:
+            self.new_special_token_count, self.tokenizer = add_special_tokens(
+                config.data_preprocess.marker_type, self.tokenizer
+            )
+            self.new_token_count += self.new_special_token_count
+            
     
     def batchify(self, batch):
         """data collator"""

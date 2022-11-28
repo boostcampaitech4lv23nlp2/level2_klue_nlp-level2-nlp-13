@@ -1,7 +1,7 @@
 path:
-  train_path: ./data/raw_data/train.csv
-  test_path: ./data/raw_data/train.csv
-  predict_path: ./data/raw_data/test_data.csv
+  train_path: ./data/raw_data/train.csv # ./data/preprocessed_data/train.typed_entity_marker.csv
+  test_path: ./data/raw_data/train.csv # ./data/preprocessed_data/train.typed_entity_marker.csv
+  predict_path: ./data/raw_data/test_data.csv # ./data/preprocessed_data/test.typed_entity_marker.csv
   save_path: saved_models/
   resume_path: # checkpoint path for resuming training
 
