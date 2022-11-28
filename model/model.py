@@ -38,12 +38,6 @@ class BaseModel(pl.LightningModule):
             self.freeze()
         self.plm.resize_token_embeddings(new_vocab_size)
 
-        self.plm.config.type_vocab_size = 2
-        # Create a new Embeddings layer, with 2 possible segments IDs instead of 1
-        self.plm.roberta.embeddings.token_type_embeddings = nn.Embedding(2, self.plm.config.hidden_size)
-        # Initialize it
-        self.plm.roberta.embeddings.token_type_embeddings.weight.data.normal_(mean=0.0, std=self.plm.config.initializer_range)
-
         print(self.plm.__dict__)
         self.loss_func = loss_module.loss_config[self.config.train.loss]
 
