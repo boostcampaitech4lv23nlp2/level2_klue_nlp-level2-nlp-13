@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchmetrics
-import transformers
 import model.loss as loss_module
 
 from copy import deepcopy
@@ -17,6 +16,7 @@ from torchmetrics.classification.accuracy import Accuracy
 from pytorch_lightning.loops.fit_loop import FitLoop
 from pytorch_lightning.loops.loop import Loop
 from pytorch_lightning.trainer.states import TrainerFn
+from transformers import AutoModelForSequenceClassification
 from data_loader.data_loaders import KfoldDataloader, BaseKFoldDataModule
 
 
@@ -29,7 +29,7 @@ class BaseModel(pl.LightningModule):
         self.config = config
         self.model_name = self.config.model.name
         self.lr = self.config.train.learning_rate
-        self.plm = transformers.AutoModelForSequenceClassification.from_pretrained(
+        self.plm = AutoModelForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path=self.model_name,
             num_labels=30,
         )
@@ -37,6 +37,7 @@ class BaseModel(pl.LightningModule):
         if self.config.train.use_frozen == True:
             self.freeze()
         self.plm.resize_token_embeddings(new_vocab_size)
+        print(self.plm.__dict__)
         self.loss_func = loss_module.loss_config[self.config.train.loss]
 
         """variables to calculate inference loss"""
