@@ -18,7 +18,7 @@ def mhm_train(config):
         project=config.wandb.project_repo,
         name=f"{config.wandb.name}_{config.wandb.info}_{now_time}",
     )
-    dataloader, model = utils.new_instance_mhm(config) # ⭐
+    dataloader, model = utils.new_instance_mhm(config) #⭐
     wandb_logger = WandbLogger()
 
     save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
