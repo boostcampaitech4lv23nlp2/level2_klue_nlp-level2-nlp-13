@@ -3,7 +3,7 @@ path:
   test_path: ./data/raw_data/train.csv
   predict_path: ./data/raw_data/test_data.csv
   save_path: saved_models/
-  ckpt_path: # checkpoint path for resuming training
+  resume_path: # checkpoint path for resuming training
 
 dataloader:
   shuffle: True
@@ -17,6 +17,7 @@ model:
 tokenizer:
   new_tokens: []
   new_special_tokens: []
+  max_length: 256
 
 train:
   max_epoch: 1
@@ -31,13 +32,18 @@ utils:
   monitor: val_f1
   patience: 25
   top_k: 3
-  precision: 32 # 16 is also possible
-
+  precision: 32 # 16(fp-16) is also possible
+  on_step: True # whether to log val/test metrics step-wise. Train metrics will automatcially be logged step-wise. 
+ 
 k_fold:
   use_k_fold: False
   num_folds: 3
-  num_splits: 5
-  
+
+ensemble:
+  use_ensemble: False
+  architecture: EnsembleVotingModel
+  ckpt_paths: []
+
 wandb:
   team_account_name: next-level-potato # 팀 계정
   project_repo: RE  # 프로젝트 레포 이름

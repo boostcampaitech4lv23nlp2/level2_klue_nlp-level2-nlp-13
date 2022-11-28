@@ -23,6 +23,7 @@ def best_save(save_path, top_k, monitor, mode, filename):
     )
     return checkpoint_callback
 
+
 def new_instance(config):
     dataloader = getattr(datamodule_arch, config.dataloader.architecture)(config)
     model = getattr(module_arch, config.model.architecture)(config, dataloader.new_vocab_size)
@@ -82,12 +83,23 @@ def num_to_label(label):
 
 
 # 모니터링 할 쌍들
-monitor_config = {
-    "val_loss": {"monitor": "val_loss", "mode": "min"},
-    "val_pearson": {"monitor": "val_pearson", "mode": "max"},
-    "val_f1": {"monitor": "val_f1", "mode": "max"},
-}
+def monitor_config(key, on_step):
+    """Returns appropriate metric monitor setting."""
+    mapping = {
+        "val_loss": {"monitor": "val_loss", "mode": "min"},
+        "val_pearson": {"monitor": "val_pearson", "mode": "max"},
+        "val_f1": {"monitor": "val_f1", "mode": "max"},
+    }
+    new_mapping = mapping.copy()
+    if on_step is True:
+        for m in mapping:
+            for detail in ["step", "epoch"]:
+                new_mapping[f"{m}_{detail}"] = mapping[m]
+    else:
+        if key.endswith("step"):
+            raise ValueError(f"Cannot monitor {key} when on_step is set 'False'")
 
+    return new_mapping[key]
 
 # def get_checkpoint_callback(criterion, save_frequency, prefix="checkpoint", use_modelcheckpoint_filename=False):
 
