@@ -8,11 +8,12 @@ path:
 dataloader:
   shuffle: True
   train_ratio: 0.8
-  architecture: BaseDataloader
+  swap: False
+  architecture: MultipleHeadDataloader # ⭐
 
 model:
   name: klue/bert-base
-  architecture: BaseModel
+  architecture: MultipleHeadRobertaModel # ⭐
 
 tokenizer:
   new_tokens: []
@@ -41,5 +42,5 @@ k_fold:
 wandb:
   team_account_name: next-level-potato # 팀 계정
   project_repo: RE  # 프로젝트 레포 이름
-  name: kbh # 실험자 명
+  name: lja # 실험자 명
   info: baseline_bert-base # 실험명

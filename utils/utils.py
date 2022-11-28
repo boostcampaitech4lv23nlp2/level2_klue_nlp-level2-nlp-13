@@ -29,6 +29,22 @@ def new_instance(config):
 
     return dataloader, model
 
+# ⭐⭐⭐MultipleHead⭐⭐⭐
+def new_instance_mhm(config):
+    dataloader = datamodule_arch.MultipleHeadDataloader(
+        config.model.name,
+        config.train.batch_size,
+        config.dataloader.train_ratio,
+        config.dataloader.shuffle,
+        config.path.train_path,
+        config.path.test_path,
+        config.path.predict_path,
+        config.dataloader.swap,
+    )
+    # 모델 불러오기
+    model = module_arch.MultipleHeadRobertaModel(config, dataloader.new_vocab_size())
+    
+    return dataloader, model
 
 def load_model(args, config, dataloader, model):
     """
