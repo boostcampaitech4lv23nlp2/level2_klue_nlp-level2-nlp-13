@@ -58,7 +58,11 @@ if __name__ == "__main__":
     elif args.mode == "ensemble":
         import ensemble
         ensemble.inference(args, config)
-        
+    
+    elif args.mode == "all" or args.mode == "a":
+        train.train(config)
+        inference.inference(args, config)
+
     else:
         print("모드를 다시 설정해주세요 ")
         print("train     : t,\ttrain")

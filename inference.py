@@ -10,6 +10,9 @@ def inference(args, config):
     dataloader, model = utils.new_instance(config)
     model, _, __ = utils.load_model(args, config, dataloader, model)
 
+    if args.mode == "all" or args.mode == "a":
+        model.load_from_checkpoint(config.path.best_model_path)
+
     output = trainer.predict(model=model, datamodule=dataloader) # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html
     pred_answer, output_prob = zip(*output)
     pred_answer = np.concatenate(pred_answer).tolist()
@@ -26,4 +29,5 @@ def inference(args, config):
 
     if not os.path.isdir("prediction"):
         os.mkdir("prediction")
-    output.to_csv("./prediction/submission.csv", index=False)
+    run_name = args.saved_model if args.saved_model is not None else config.path.best_model_path
+    output.to_csv(f"./prediction/submission_{run_name}.csv", index=False)
