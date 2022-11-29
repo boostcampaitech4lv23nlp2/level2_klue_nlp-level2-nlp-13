@@ -231,7 +231,7 @@ class MultipleHeadRobertaModel(BaseModel):
     def test_step(self, batch, batch_idx):
         #input_ids, _, attention_mask, labels, is_relation_labels = batch
         #logits_1, logits_2 = self((input_ids, attention_mask))
-        tokens, labels, is_relation_labels  = batch
+        tokens, labels, _  = batch
         input_ids= tokens['input_ids']
         attention_mask =  tokens['attention_mask']
         logits_1, logits_2 = self((input_ids, attention_mask))
@@ -245,7 +245,7 @@ class MultipleHeadRobertaModel(BaseModel):
     def predict_step(self, batch, batch_idx):
         #input_ids, attention_mask = batch
         #logits_1, logits_2 = self((input_ids, attention_mask))
-        tokens, _ = batch
+        tokens, *_ = batch
         input_ids= tokens['input_ids']
         attention_mask =  tokens['attention_mask']
         logits_1, logits_2 = self((input_ids, attention_mask))
