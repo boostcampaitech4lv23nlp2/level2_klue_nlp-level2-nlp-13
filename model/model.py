@@ -117,18 +117,29 @@ class MultipleHeadRobertaModel(BaseModel):
         self.model_config = AutoConfig.from_pretrained("klue/roberta-large")
         self.plm = CustomRobertaForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path="klue/roberta-large", 
-            config=self.model_config)
+            config=self.model_config
+        )
         self.alpha = 0.5 # is_relation
         self.beta = 0.5
     
     def forward(self, x):
+        '''
         input_ids, attention_mask = x
         outputs= self.plm(input_ids=input_ids, attention_mask=attention_mask)
         output_1, output_2 = outputs[0][0], outputs[1][0]
         return output_1, output_2
-    
+        '''
+        x = self.plm(**x)["logits"]
+
+        return x
+
     def training_step(self, batch, batch_idx):
-        input_ids, _, attention_mask, labels, is_relation_labels = batch
+        #input_ids, _, attention_mask, labels, is_relation_labels = batch
+        #logits_1, logits_2 = self((input_ids, attention_mask))
+        tokens, labels = batch
+        input_ids= tokens['input_ids'] 
+        attention_mask =  tokens['attention_mask']
+        is_relation_labels = tokens['is_relation_label']
         logits_1, logits_2 = self((input_ids, attention_mask))
 
         is_relation_loss = self.loss_func(logits_1, is_relation_labels.long(), self.config)
@@ -144,13 +155,14 @@ class MultipleHeadRobertaModel(BaseModel):
         self.log("train_auprc", metrics["auprc"], on_step=True, prog_bar=True)
         self.log("train_acc", metrics["accuracy"], on_step=True, prog_bar=True)
 
-        return loss   
+        return final_loss   
 
     def validation_step(self, batch, batch_idx): # 😰
         #input_ids, _ , attention_mask, labels, is_relation_labels = batch
-        tokens, labels, is_relation_labels  = batch # 😰
-        input_ids= tokens['input_ids'] # 😰
-        attention_mask =  tokens['attention_mask'] # 😰
+        tokens, labels  = batch
+        input_ids= tokens['input_ids']
+        attention_mask =  tokens['attention_mask']
+        is_relation_labels = tokens['is_relation_label']
         logits_1, logits_2 = self((input_ids, attention_mask))
 
         is_relation_loss = self.loss_func(logits_1, is_relation_labels.long(), self.config)
@@ -169,7 +181,12 @@ class MultipleHeadRobertaModel(BaseModel):
         return loss   
 
     def test_step(self, batch, batch_idx):
-        input_ids, _, attention_mask, labels, is_relation_labels = batch
+        #input_ids, _, attention_mask, labels, is_relation_labels = batch
+        #logits_1, logits_2 = self((input_ids, attention_mask))
+        tokens, labels  = batch
+        input_ids= tokens['input_ids']
+        attention_mask =  tokens['attention_mask']
+        is_relation_labels = tokens['is_relation_label']
         logits_1, logits_2 = self((input_ids, attention_mask))
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits_2.detach().cpu().numpy()}
@@ -179,7 +196,11 @@ class MultipleHeadRobertaModel(BaseModel):
         self.log("test_acc", metrics["accuracy"], on_step=True, prog_bar=True)
 
     def predict_step(self, batch, batch_idx):
-        input_ids, attention_mask = batch
+        #input_ids, attention_mask = batch
+        #logits_1, logits_2 = self((input_ids, attention_mask))
+        tokens, _ = batch
+        input_ids= tokens['input_ids']
+        attention_mask =  tokens['attention_mask']
         logits_1, logits_2 = self((input_ids, attention_mask))
 
         self.output_pred = np.argmax(logits_2.detach().cpu().numpy(), axis=-1)
