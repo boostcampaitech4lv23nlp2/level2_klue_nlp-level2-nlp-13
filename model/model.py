@@ -136,10 +136,10 @@ class MultipleHeadRobertaModel(BaseModel):
     def training_step(self, batch, batch_idx):
         #input_ids, _, attention_mask, labels, is_relation_labels = batch
         #logits_1, logits_2 = self((input_ids, attention_mask))
-        tokens, labels = batch
+        tokens, labels, is_relation_labels = batch
         input_ids= tokens['input_ids'] 
         attention_mask =  tokens['attention_mask']
-        is_relation_labels = tokens['is_relation_label']
+        
         logits_1, logits_2 = self((input_ids, attention_mask))
 
         is_relation_loss = self.loss_func(logits_1, is_relation_labels.long(), self.config)
@@ -159,10 +159,10 @@ class MultipleHeadRobertaModel(BaseModel):
 
     def validation_step(self, batch, batch_idx): # 😰
         #input_ids, _ , attention_mask, labels, is_relation_labels = batch
-        tokens, labels  = batch
+        tokens, labels, is_relation_labels  = batch
         input_ids= tokens['input_ids']
         attention_mask =  tokens['attention_mask']
-        is_relation_labels = tokens['is_relation_label']
+
         logits_1, logits_2 = self((input_ids, attention_mask))
 
         is_relation_loss = self.loss_func(logits_1, is_relation_labels.long(), self.config)
@@ -183,10 +183,10 @@ class MultipleHeadRobertaModel(BaseModel):
     def test_step(self, batch, batch_idx):
         #input_ids, _, attention_mask, labels, is_relation_labels = batch
         #logits_1, logits_2 = self((input_ids, attention_mask))
-        tokens, labels  = batch
+        tokens, labels, is_relation_labels  = batch
         input_ids= tokens['input_ids']
         attention_mask =  tokens['attention_mask']
-        is_relation_labels = tokens['is_relation_label']
+
         logits_1, logits_2 = self((input_ids, attention_mask))
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits_2.detach().cpu().numpy()}

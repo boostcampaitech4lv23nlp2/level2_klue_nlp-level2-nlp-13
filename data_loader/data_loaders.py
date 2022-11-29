@@ -295,7 +295,7 @@ class MultipleHeadDataloader(pl.LightningDataModule):
         
         outs = self.tokenize(sentences, subject_entities, object_entities,is_relation_label)
         labels = torch.tensor(labels)
-        return outs, labels
+        return outs, labels, is_relation_label
 
     def tokenize(self, sentences, subject_entities, object_entities,is_relation_label):
         """
