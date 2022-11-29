@@ -17,7 +17,7 @@ if __name__ == "__main__":
     """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--config", "-c", type=str, default="base_config")
+    parser.add_argument("--config", "-c", type=str, default="custom_config")
     parser.add_argument("--mode", "-m", default="train")
     parser.add_argument(
         "--saved_model",
@@ -58,7 +58,14 @@ if __name__ == "__main__":
     elif args.mode == "ensemble":
         import ensemble
         ensemble.inference(args, config)
-        
+    
+    elif args.mode == "all" or args.mode == "a":
+        if args.saved_model is not None:
+            print("Cannot input 'saved_model' for 'all' mode")
+
+        train.train(config)
+        inference.inference(args, config)
+
     else:
         print("모드를 다시 설정해주세요 ")
         print("train     : t,\ttrain")

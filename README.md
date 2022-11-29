@@ -29,22 +29,29 @@ pip install -r requirements.txt
 
 ### 학습
 ```bash
-python main.py -c "custom_config" # ./config/custom_config.yaml 을 이용할 시 
-python main.py -m t -c "custom_config"
-python main.py --mode train --config "custom_config"
+python main.py -c custom_config # ./config/custom_config.yaml 을 이용할 시 
+python main.py -m t -c custom_config
+python main.py --mode train --config custom_config
 ```
 
 ### 추가 학습
-추가 학습을 하려면 기존 모델의 체크포인트를 path.resume_path에 추가하시면 됩니다 (기타 위와 동일).
+추가 학습을 하려면 기존 모델의 체크포인트를 config.path.resume_path에 추가하시면 됩니다 (기타 위와 동일).
 ```bash
-python main.py -m t -c "custom_config"
+python main.py -m t -c custom_config
 ```
 
 ### 추론
 ```bash
 # 실행 시 prediction 폴더에 submission.csv가 생성됨
 python main.py -m i -s "saved_models/klue/bert-base.ckpt"
-python main.py -m i -s "saved_models/klue/bert-base.ckpt" -c "custom_config"
+python main.py -m i -s "saved_models/klue/bert-base.ckpt" -c custom_config
+```
+
+### (추가) 학습 + 추론
+학습과 추론을 한 번에 실행할 수 있습니다. 추가 학습할 모델의 체크포인트를 config.path.resume_path에 입력하시고 다음을 실행하시면 추가로 학습 후 추론까지 진행합니다.
+```bash
+python main.py --mode all --config custom_config 
+python main.py -m a -c custom_config
 ```
 ### base_config.yaml
 - tokenizer - syllable: True 설정하면 음절 단위 토크나이저 적용 가능

@@ -8,9 +8,13 @@ from utils import utils
 
 
 def inference(args, config):
-    trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1)
+    trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1, deterministic=True)
     dataloader, model = utils.new_instance(config)
-    model, _, __ = utils.load_model(args, config, dataloader, model)
+    if args.mode in ["inference", "i"]:
+        model, _, __ = utils.load_model(args, config, dataloader, model)
+
+    if args.mode in ["all", "a"]:
+        model.load_from_checkpoint(config.path.best_model_path)
 
     output = trainer.predict(model=model, datamodule=dataloader) # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html
     pred_answer, output_prob = zip(*output)
@@ -28,4 +32,7 @@ def inference(args, config):
 
     if not os.path.isdir("prediction"):
         os.mkdir("prediction")
-    output.to_csv("./prediction/submission.csv", index=False)
+    path = args.saved_model if args.saved_model is not None else config.path.best_model_path
+    run_name = config.model.name + path.split("/")[-1]
+    run_name = run_name.replace("/", "-")
+    output.to_csv(f"./prediction/submission_{run_name}.csv", index=False)
