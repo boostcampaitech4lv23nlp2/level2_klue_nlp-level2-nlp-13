@@ -1,13 +1,16 @@
 import datetime
+import logging
+
 import pytorch_lightning as pl
 import pytz
 import torch
-import wandb
-import logging
-from data_loader.data_loaders import KfoldDataloader
 from pytorch_lightning.loggers import WandbLogger
-from utils import utils, logger
+
+import wandb
+from data_loader.data_loaders import KfoldDataloader
 from model import model as module_arch
+from utils import logger, utils
+
 
 def train(config):
     now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d-%H:%M:%S")
@@ -16,15 +19,15 @@ def train(config):
         project=config.wandb.project_repo,
         name=f"{config.wandb.name}_{config.wandb.info}_{now_time}",
     )
-    
-    dataloader, model = utils.new_instance(config)
-    model.load_state_dict(torch.load('klue-roberta-retrained/mlm_ep10.bin'), strict=False)
-    assert config.k_fold.use_k_fold == isinstance(dataloader, KfoldDataloader), \
-        "Check your config again: Make sure `k_fold.use_k_fold` is compatible with `dataloader.architecture`" 
 
-    wandb_logger = WandbLogger(log_model='all')
+    dataloader, model = utils.new_instance(config)
+    assert config.k_fold.use_k_fold == isinstance(
+        dataloader, KfoldDataloader
+    ), "Check your config again: Make sure `k_fold.use_k_fold` is compatible with `dataloader.architecture`"
+
+    wandb_logger = WandbLogger(log_model="all")
     save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
-    wandb_logger.experiment.config.update({"save_dir":save_path})
+    wandb_logger.experiment.config.update({"save_dir": save_path})
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
@@ -47,7 +50,9 @@ def train(config):
                 mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
                 filename="{epoch}-{step}-{val_loss}-{val_f1}",
             ),
-        ] if not config.k_fold.use_k_fold else [
+        ]
+        if not config.k_fold.use_k_fold
+        else [
             utils.early_stop(
                 monitor=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["monitor"],
                 mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
@@ -62,11 +67,11 @@ def train(config):
         internal_fit_loop = trainer.fit_loop
         trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=save_path)
         trainer.fit_loop.connect(internal_fit_loop)
-        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)  
+        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
     else:
         trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
-        trainer.test(model=model, datamodule=dataloader) # K-fold CV runs test_step internally as part of fitting step
-        
+        trainer.test(model=model, datamodule=dataloader)  # K-fold CV runs test_step internally as part of fitting step
+
     wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
     logger.log_config_yaml(config, save_path)
