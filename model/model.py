@@ -122,16 +122,17 @@ class MultipleHeadRobertaModel(BaseModel):
         self.alpha = 0.5 # is_relation
         self.beta = 0.5
     
-    def forward(self, x):
-        '''
+    def forward(self, x): # same as self
         input_ids, attention_mask = x
         outputs= self.plm(input_ids=input_ids, attention_mask=attention_mask)
         output_1, output_2 = outputs[0][0], outputs[1][0]
         return output_1, output_2
         '''
-        x = self.plm(**x)["logits"]
-
+        #print(x)
+        x = self.plm(**x)["logits"] #-> training_step에서 token type id 써야 함
+        #print(x)
         return x
+        '''
 
     def training_step(self, batch, batch_idx):
         #input_ids, _, attention_mask, labels, is_relation_labels = batch
@@ -186,7 +187,6 @@ class MultipleHeadRobertaModel(BaseModel):
         tokens, labels, is_relation_labels  = batch
         input_ids= tokens['input_ids']
         attention_mask =  tokens['attention_mask']
-
         logits_1, logits_2 = self((input_ids, attention_mask))
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits_2.detach().cpu().numpy()}
