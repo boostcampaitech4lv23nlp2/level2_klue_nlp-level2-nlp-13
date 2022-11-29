@@ -35,9 +35,9 @@ def CELoss(output, target, conf=None):
     return loss_func(output, target)
 
 def FocalLoss(output, target, conf=None):
-    alpha = 0.25
-    gamma = 1
-    loss_func = nn.CrossEntropyLoss(label_smoothing=conf.train.label_smoothing)(output, target)
+    alpha = 1
+    gamma = 2
+    loss_func = nn.CrossEntropyLoss()(output, target)
     pt = torch.exp(-loss_func)
     F_loss = alpha * (1 - pt) ** gamma * loss_func
 
@@ -47,7 +47,7 @@ def FocalLoss(output, target, conf=None):
 #     print(len(output), output, len(target), target)
 #     beta=1.0
 #     diff = torch.abs(output - target)
-#     loss = torch.where(diff < beta, 0.5 * diff * diff / beta,
+#     loss = torch.where(diff < beta, 0.5 * diff * diff g/ beta,
 #                        diff - 0.5 * beta)
 #     return loss
 
@@ -63,9 +63,9 @@ def FocalLoss(output, target, conf=None):
 #     C = 0.2*torch.max(absdiff).item()
 #     return torch.mean(torch.where(absdiff < C, absdiff,(absdiff*absdiff+C*C)/(2*C) ))
 
-def KLLoss(output, target, conf=None):
-    loss_func = nn.KLDivLoss(reduction = "batchmean")
-    return loss_func(output, target)
+# def KLLoss(output, target, conf=None):
+#     loss_func = nn.KLDivLoss(reduction = "batchmean")
+#     return loss_func(output, target)
 
 
 # fmt: off
@@ -128,5 +128,5 @@ loss_config = {
     "focal": FocalLoss,
     # "huber": HuberLoss,
     # "smooth": SmoothL1Loss,
-    "kl": KLLoss,
+    # "kl": KLLoss,
 }

@@ -32,8 +32,8 @@ class BaseModel(pl.LightningModule):
         self.plm = AutoModelForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path=self.model_name,
             num_labels=30,
-            hidden_dropout_prob=0.2,
-            attention_probs_dropout_prob=0.2,
+            hidden_dropout_prob=0.1,
+            attention_probs_dropout_prob=0.1,
         )
 
         if self.config.train.use_frozen == True:
