@@ -6,7 +6,6 @@ import pytorch_lightning as pl
 import torch
 import inference
 import train
-import mhm_train # ⭐⭐⭐MultipleHead⭐⭐⭐
 from omegaconf import OmegaConf
 
 
@@ -44,10 +43,7 @@ if __name__ == "__main__":
             train.k_train(config)
         else:
             train.train(config)
-
-    elif args.mode == "mhm_train" or args.mode == "mhm": # ⭐⭐⭐MultipleHead⭐⭐⭐
-        mhm_train.mhm_train(config) #(args, config)
-
+            
     elif args.mode == "exp" or args.mode == "e":
         exp_count = int(input("실험할 횟수를 입력해주세요 "))
         train.sweep(config, exp_count)
