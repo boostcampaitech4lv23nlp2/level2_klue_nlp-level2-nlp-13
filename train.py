@@ -22,7 +22,7 @@ def train(config):
         "Check your config again: Make sure `k_fold.use_k_fold` is compatible with `dataloader.architecture`" 
 
     wandb_logger = WandbLogger(log_model='all')
-    save_path = f"{config.path.save_path}{config.model.name}/maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
+    save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
     wandb_logger.experiment.config.update({"save_dir":save_path})
     trainer = pl.Trainer(
         accelerator="gpu",
