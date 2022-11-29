@@ -9,11 +9,11 @@ dataloader:
   shuffle: True
   train_ratio: 0.8
   swap: False
-  architecture: MultipleHeadDataloader # ⭐
+  architecture: MultipleHeadDataloader #BaseDataloader #MultipleHeadDataloader # ⭐
 
 model:
   name: klue/bert-base
-  architecture: MultipleHeadRobertaModel # ⭐
+  architecture: MultipleHeadRobertaModel #BaseModel #MultipleHeadRobertaModel # ⭐
 
 tokenizer:
   new_tokens: []
@@ -22,7 +22,7 @@ tokenizer:
 
 train:
   max_epoch: 1
-  batch_size: 64
+  batch_size: 8 #Large는 64 안됨
   learning_rate: 1e-5
   loss: ce
   label_smoothing: 0.1
