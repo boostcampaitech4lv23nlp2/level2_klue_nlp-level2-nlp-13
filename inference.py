@@ -7,12 +7,12 @@ from utils import utils
 
 def inference(args, config):
     trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1, deterministic=True)
-    dataloader, model = utils.new_instance(config)
-    if args.saved_model is not None:
+
+    if args.mode in ["inference", "i"]:
+        dataloader, model = utils.new_instance(config)
         model, _, __ = utils.load_model(args, config, dataloader, model)
 
-    if args.mode == "all" or args.mode == "a":
-        print('loaded')
+    if args.mode in ["all", "a"]:
         model.load_from_checkpoint(config.path.best_model_path)
 
     output = trainer.predict(model=model, datamodule=dataloader) # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html
