@@ -60,6 +60,9 @@ if __name__ == "__main__":
         ensemble.inference(args, config)
     
     elif args.mode == "all" or args.mode == "a":
+        if args.saved_model is not None:
+            print("Cannot input 'saved_model' for 'all' mode")
+
         train.train(config)
         inference.inference(args, config)
 
