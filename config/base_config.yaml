@@ -16,6 +16,7 @@ model:
 
 tokenizer:
   new_tokens: []
+  new_special_tokens: []
   max_length: 256
 
 train:
