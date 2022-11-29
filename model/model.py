@@ -15,7 +15,7 @@ from pytorch_lightning.loops.loop import Loop
 from pytorch_lightning.trainer.states import TrainerFn
 from torch.optim.lr_scheduler import ExponentialLR, LambdaLR, StepLR
 from torchmetrics.classification.accuracy import Accuracy
-from transformers import AutoModelForSequenceClassification, AutoConfig, RobertaModel
+from transformers import AutoModelForSequenceClassification, AutoConfig, RobertaModel, AutoModel
 from transformers.models.roberta.modeling_roberta import RobertaPreTrainedModel
 
 import model.loss as loss_module
@@ -164,31 +164,37 @@ class BaseModel(pl.LightningModule):
         return [optimizer], [scheduler]
 
 
-class MultipleHeadModel(BaseModel):
+class MultiTaskModel(BaseModel):
     def __init__(self, config, new_vocab_size):
         super().__init__(config, new_vocab_size)
         self.plm = AutoModel.from_pretrained(config.model.name) # pretrained language model
-        self.classifier_binary = self.build_classifier(config=self.lm.config, num_labels=2)
-        self.classifier_multi = self.build_classifier(config=self.lm.config, num_labels=3)
+        self.classifier_binary = self.build_classifier(model_config=self.plm.config, num_labels=2)
+        self.classifier_multi = self.build_classifier(model_config=self.plm.config, num_labels=30)
 
-        self.loss_fn = nn.CrossEntropyLoss()
-        
-        self.w_binary, self.w = 0.5, 0.5
+        self.loss_fn = nn.CrossEntropyLoss(label_smoothing=config.train.label_smoothing)
+        self.w_binary, self.w = 0.4, 0.6
+
+    def forward(self, x):
+        out = self.plm(**x).pooler_output
+        logits = self.classifier_multi(out)
+        logits_binary = self.classifier_binary(out)
+
+        return logits, logits_binary
 
     def build_classifier(self, model_config, num_labels):
-        return nn.Sequential([
+        return nn.Sequential(
             nn.Linear(model_config.hidden_size, model_config.hidden_size//2),
             nn.ReLU(),
             nn.Dropout(p=0.1),
             nn.Linear(model_config.hidden_size//2, num_labels),
-            ])
+        )
     
     def training_step(self, batch, batch_idx):
         tokens, labels, labels_binary  = batch
-        logits = self(tokens)
+        logits, logits_binary = self(tokens)
 
         loss = self.loss_fn(logits, labels.long())
-        loss_binary = self.loss_fn(logits, labels.long())
+        loss_binary = self.loss_fn(logits_binary, labels_binary.long())
         loss_total = self.w * loss + self.w_binary * loss_binary 
 
         self.log("train_loss", loss, on_step=True, prog_bar=True)
@@ -202,10 +208,10 @@ class MultipleHeadModel(BaseModel):
 
     def validation_step(self, batch, batch_idx):
         tokens, labels, labels_binary = batch
-        logits = self(tokens)
+        logits, logits_binary = self(tokens)
 
         loss = self.loss_fn(logits, labels.long())
-        loss_binary = self.loss_fn(logits, labels.long())
+        loss_binary = self.loss_fn(logits_binary, labels_binary.long())
         loss_total = self.w * loss + self.w_binary * loss_binary 
 
         self.log("val_loss", loss, on_step=self.config.utils.on_step, prog_bar=True)
@@ -233,7 +239,7 @@ class MultipleHeadModel(BaseModel):
     def test_step(self, batch, batch_idx):
         """Log the original loss and metrics only"""
         tokens, labels, _ = batch
-        logits = self(tokens)
+        logits, _ = self(tokens)
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
@@ -254,7 +260,7 @@ class MultipleHeadModel(BaseModel):
 
     def predict_step(self, batch, batch_idx):
         tokens, *_ = batch
-        logits = self(tokens)
+        logits, _ = self(tokens)
 
         self.output_pred = np.argmax(logits.detach().cpu().numpy(), axis=-1)
         self.output_prob = F.softmax(logits, dim=-1).detach().cpu().numpy()
