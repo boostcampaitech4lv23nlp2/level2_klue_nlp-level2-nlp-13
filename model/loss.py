@@ -43,30 +43,6 @@ def FocalLoss(output, target, conf=None):
 
     return torch.mean(F_loss)
 
-# def HuberLoss(output, target, conf=None):
-#     print(len(output), output, len(target), target)
-#     beta=1.0
-#     diff = torch.abs(output - target)
-#     loss = torch.where(diff < beta, 0.5 * diff * diff g/ beta,
-#                        diff - 0.5 * beta)
-#     return loss
-
-#     loss_func = nn.HuberLoss()
-#     return max(loss_func(output, target))
-
-# def SmoothL1Loss(output, target, conf=None):
-#     loss_func = nn.SmoothL1Loss()
-#     return loss_func(output, target)
-
-# def Reverse_HuberLoss(output, target):
-#     absdiff = torch.abs(output-target)
-#     C = 0.2*torch.max(absdiff).item()
-#     return torch.mean(torch.where(absdiff < C, absdiff,(absdiff*absdiff+C*C)/(2*C) ))
-
-# def KLLoss(output, target, conf=None):
-#     loss_func = nn.KLDivLoss(reduction = "batchmean")
-#     return loss_func(output, target)
-
 
 # fmt: off
 def klue_re_micro_f1(preds, labels):
@@ -126,7 +102,4 @@ loss_config = {
     "bce": BCEWithLogitsLoss,
     "ce": CELoss,
     "focal": FocalLoss,
-    # "huber": HuberLoss,
-    # "smooth": SmoothL1Loss,
-    # "kl": KLLoss,
 }
