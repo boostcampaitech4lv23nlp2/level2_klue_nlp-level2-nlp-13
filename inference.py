@@ -6,11 +6,13 @@ from utils import utils
 
 
 def inference(args, config):
-    trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1)
+    trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1, deterministic=True)
     dataloader, model = utils.new_instance(config)
-    model, _, __ = utils.load_model(args, config, dataloader, model)
+    if args.saved_model is not None:
+        model, _, __ = utils.load_model(args, config, dataloader, model)
 
     if args.mode == "all" or args.mode == "a":
+        print('loaded')
         model.load_from_checkpoint(config.path.best_model_path)
 
     output = trainer.predict(model=model, datamodule=dataloader) # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html
@@ -29,5 +31,7 @@ def inference(args, config):
 
     if not os.path.isdir("prediction"):
         os.mkdir("prediction")
-    run_name = args.saved_model if args.saved_model is not None else config.path.best_model_path
+    path = args.saved_model if args.saved_model is not None else config.path.best_model_path
+    run_name = config.model.name + path.split("/")[-1]
+    run_name = run_name.replace("/", "-")
     output.to_csv(f"./prediction/submission_{run_name}.csv", index=False)
