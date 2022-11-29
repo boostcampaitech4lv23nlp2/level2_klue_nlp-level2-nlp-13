@@ -204,3 +204,5 @@ outputs/
 
 data/*.csv
 prediction/
+best_model/
+klue-roberta-retrained/

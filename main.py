@@ -17,7 +17,7 @@ if __name__ == "__main__":
     """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--config", "-c", type=str, default="base_config")
+    parser.add_argument("--config", "-c", type=str, default="custom_config")
     parser.add_argument("--mode", "-m", default="train")
     parser.add_argument(
         "--saved_model",

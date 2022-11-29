@@ -18,6 +18,7 @@ def train(config):
     )
     
     dataloader, model = utils.new_instance(config)
+    model.load_state_dict(torch.load('klue-roberta-retrained/mlm_ep10.bin'), strict=False)
     assert config.k_fold.use_k_fold == isinstance(dataloader, KfoldDataloader), \
         "Check your config again: Make sure `k_fold.use_k_fold` is compatible with `dataloader.architecture`" 
 
