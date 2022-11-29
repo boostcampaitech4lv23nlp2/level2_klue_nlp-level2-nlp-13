@@ -41,6 +41,8 @@ class BaseModel(pl.LightningModule):
         self.plm.resize_token_embeddings(new_vocab_size)
         print(self.plm.__dict__)
         self.loss_func = loss_module.loss_config[self.config.train.loss]
+        self.val_cm = config.train.print_val_cm
+        self.test_cm = config.train.print_test_cm
 
         """variables to calculate inference loss"""
         self.output_pred = []
@@ -105,7 +107,8 @@ class BaseModel(pl.LightningModule):
         return loss
 
     def validation_epoch_end(self, outputs):
-        utils.utils.get_confusion_matrix(self.valid_preds, self.valid_labels, "validation")
+        if self.val_cm:
+            utils.utils.get_confusion_matrix(self.valid_preds, self.valid_labels, "validation")
 
     def test_step(self, batch, batch_idx):
         tokens, labels = batch
@@ -126,7 +129,8 @@ class BaseModel(pl.LightningModule):
             self.test_labels = np.concatenate((self.test_labels, pred["label_ids"]), axis=0)
 
     def test_epoch_end(self, outputs):
-        utils.utils.get_confusion_matrix(self.test_preds, self.test_labels, "test")
+        if self.test_cm:
+            utils.utils.get_confusion_matrix(self.test_preds, self.test_labels, "test")
 
     def predict_step(self, batch, batch_idx):
         tokens, _ = batch
