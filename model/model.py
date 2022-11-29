@@ -1,26 +1,28 @@
 import warnings
+from abc import ABC, abstractmethod
+from copy import deepcopy
+from os import path
+from typing import Any, Dict, List, Optional, Type
+
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchmetrics
-import model.loss as loss_module
-
-from copy import deepcopy
-from os import path
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Type
-from torch.optim.lr_scheduler import ExponentialLR, LambdaLR, StepLR
-from torchmetrics.classification.accuracy import Accuracy
 from pytorch_lightning.loops.fit_loop import FitLoop
 from pytorch_lightning.loops.loop import Loop
 from pytorch_lightning.trainer.states import TrainerFn
+from torch.optim.lr_scheduler import ExponentialLR, LambdaLR, StepLR
+from torchmetrics.classification.accuracy import Accuracy
 from transformers import AutoModelForSequenceClassification
-from data_loader.data_loaders import KfoldDataloader, BaseKFoldDataModule
 
+import model.loss as loss_module
+import utils
+from data_loader.data_loaders import BaseKFoldDataModule, KfoldDataloader
 
 warnings.filterwarnings("ignore")
+
 
 class BaseModel(pl.LightningModule):
     def __init__(self, config, new_vocab_size):
@@ -42,10 +44,17 @@ class BaseModel(pl.LightningModule):
 
         print(self.plm.__dict__)
         self.loss_func = loss_module.loss_config[self.config.train.loss]
+        self.val_cm = config.train.print_val_cm
+        self.test_cm = config.train.print_test_cm
 
         """variables to calculate inference loss"""
         self.output_pred = []
         self.output_prob = []
+        """variables to calculate confusion matrix"""
+        self.valid_preds = []
+        self.valid_labels = []
+        self.test_preds = []
+        self.test_labels = []
 
     def freeze(self):
         for name, param in self.plm.named_parameters():
@@ -59,7 +68,7 @@ class BaseModel(pl.LightningModule):
                 param.requires_grad = True
 
     def forward(self, x):
-        #input_ids, token_type_ids, attention_mask = x
+        # input_ids, token_type_ids, attention_mask = x
         x = self.plm(**x)["logits"]
 
         return x
@@ -91,7 +100,18 @@ class BaseModel(pl.LightningModule):
         self.log("val_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
         self.log("val_acc", metrics["accuracy"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
 
+        if len(self.valid_preds) == 0 and len(self.valid_labels) == 0:
+            self.valid_preds = pred["predictions"]
+            self.valid_labels = pred["label_ids"]
+        else:
+            self.valid_preds = np.concatenate((self.valid_preds, pred["predictions"]), axis=0)
+            self.valid_labels = np.concatenate((self.valid_labels, pred["label_ids"]), axis=0)
+
         return loss
+
+    def validation_epoch_end(self, outputs):
+        if self.val_cm:
+            utils.utils.get_confusion_matrix(self.valid_preds, self.valid_labels, "validation")
 
     def test_step(self, batch, batch_idx):
         tokens, labels = batch
@@ -99,10 +119,21 @@ class BaseModel(pl.LightningModule):
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-    
+
         self.log(f"test_f1", metrics["micro f1 score"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
         self.log(f"test_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
         self.log(f"test_acc", metrics["accuracy"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
+
+        if len(self.test_preds) == 0 and len(self.test_labels) == 0:
+            self.test_preds = pred["predictions"]
+            self.test_labels = pred["label_ids"]
+        else:
+            self.test_preds = np.concatenate((self.test_preds, pred["predictions"]), axis=0)
+            self.test_labels = np.concatenate((self.test_labels, pred["label_ids"]), axis=0)
+
+    def test_epoch_end(self, outputs):
+        if self.test_cm:
+            utils.utils.get_confusion_matrix(self.test_preds, self.test_labels, "test")
 
     def predict_step(self, batch, batch_idx):
         tokens, _ = batch
@@ -139,6 +170,7 @@ class CustomModel(BaseModel):
 
 class EnsembleVotingModel(pl.LightningModule):
     """Model for KFold CV"""
+
     def __init__(self, model_cls: Type[pl.LightningModule], checkpoint_paths: List[str]) -> None:
         super().__init__()
         # Create `num_folds` models with their associated fold weights
@@ -213,7 +245,7 @@ class KFoldLoop(Loop):
     def on_advance_end(self) -> None:
         """Used to save the weights of the current fold and reset the LightningModule and its optimizers."""
         self.trainer.save_checkpoint(path.join(self.export_path, f"fold_{self.current_fold}.ckpt"))
-        
+
         # restore the original weights + optimizers and schedulers.
         self.trainer.lightning_module.load_state_dict(self.lightning_module_state_dict)
         self.trainer.strategy.setup_optimizers(self.trainer)
