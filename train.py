@@ -9,11 +9,11 @@ from pytorch_lightning.loggers import WandbLogger
 import wandb
 from data_loader.data_loaders import KfoldDataloader
 from model import model as module_arch
-from utils import utils
+from utils import logger, utils
 
 
 def train(config):
-    now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
+    now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d-%H:%M:%S")
     wandb.init(
         entity=config.wandb.team_account_name,
         project=config.wandb.project_repo,
@@ -27,7 +27,7 @@ def train(config):
 
     wandb_logger = WandbLogger(log_model="all")
     save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
-    wandb_logger.experiment.config.update({"save_dir": save_path + "logs/"})
+    wandb_logger.experiment.config.update({"save_dir": save_path})
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
@@ -73,7 +73,9 @@ def train(config):
         trainer.test(model=model, datamodule=dataloader)  # K-fold CV runs test_step internally as part of fitting step
 
     wandb.finish()
-    # trainer.checkpoint_callback.best_model_path
+    config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
+    logger.log_config_yaml(config, save_path)
+
     # trainer.save_checkpoint(save_path + "model.ckpt")
     # model.plm.save_pretrained(save_path)
     # torch.save(model, save_path + "model.pt")
