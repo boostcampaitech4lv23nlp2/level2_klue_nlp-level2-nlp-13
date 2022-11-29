@@ -11,6 +11,7 @@ from torch.utils.data.dataset import Subset
 from transformers import AutoTokenizer
 from sklearn.model_selection import KFold, StratifiedShuffleSplit, train_test_split
 from tqdm.auto import tqdm
+from data.utils.utils import add_special_tokens
 
 class CustomDataset(Dataset):
 
@@ -58,6 +59,14 @@ class BaseDataloader(pl.LightningDataModule):
         if self.new_tokens != []:
             self.new_token_count += self.tokenizer.add_tokens(self.new_tokens)
             print(f"{self.new_token_count} new token(s) are added to the vocabulary.")
+
+        self.new_special_token_count = 0
+        if config.data_preprocess.marker_type and config.data_preprocess.marker_type in config.path.train_path:
+            self.new_special_token_count, self.tokenizer = add_special_tokens(
+                config.data_preprocess.marker_type, self.tokenizer
+            )
+            self.new_token_count += self.new_special_token_count
+            
     
     def batchify(self, batch):
         """data collator"""
@@ -67,12 +76,14 @@ class BaseDataloader(pl.LightningDataModule):
         labels = torch.tensor(labels)
         return outs, labels
 
+
     def tokenize(self, sentences, subject_entities, object_entities):
         """
         tokenizer로 과제에 따라 tokenize 
         """
         sep_token = self.tokenizer.special_tokens_map["sep_token"]
         concat_entity = [e01 + sep_token + e02 for e01, e02 in zip(subject_entities, object_entities)]
+
 
         tokens = self.tokenizer(
             concat_entity,
@@ -85,6 +96,8 @@ class BaseDataloader(pl.LightningDataModule):
         )
 
         return tokens
+    
+
 
     def preprocess(self, df):
         from utils.utils import label_to_num
@@ -102,6 +115,7 @@ class BaseDataloader(pl.LightningDataModule):
             df['label'] = num_labels
         
         return df
+
 
     def setup(self, stage="fit"):
         if stage == "fit":
@@ -146,6 +160,7 @@ class BaseDataloader(pl.LightningDataModule):
     @property
     def new_vocab_size(self):
         return self.new_token_count + self.tokenizer.vocab_size
+
 
 
 class BaseKFoldDataModule(pl.LightningDataModule, ABC):

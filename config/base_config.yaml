@@ -1,9 +1,12 @@
 path:
-  train_path: ./data/raw_data/train.csv
-  test_path: ./data/raw_data/train.csv
-  predict_path: ./data/raw_data/test_data.csv
+  train_path: ./data/raw_data/train.csv # ./data/preprocessed_data/train.typed_entity_marker.csv
+  test_path: ./data/raw_data/train.csv # ./data/preprocessed_data/train.typed_entity_marker.csv
+  predict_path: ./data/raw_data/test_data.csv # ./data/preprocessed_data/test.typed_entity_marker.csv
   save_path: saved_models/
   resume_path: # checkpoint path for resuming training
+
+data_preprocess:
+  marker_type: typed_entity_marker # entity_marker, entity_marker_punc, typed_entity_marker, typed_entity_makrer_punc_1~3
 
 dataloader:
   shuffle: True
@@ -34,7 +37,7 @@ utils:
   top_k: 3
   precision: 32 # 16(fp-16) is also possible
   on_step: True # whether to log val/test metrics step-wise. Train metrics will automatcially be logged step-wise. 
- 
+
 k_fold:
   use_k_fold: False
   num_folds: 3
