@@ -279,7 +279,7 @@ class MultipleHeadDataloader(BaseDataloader):
         """is_relation_label is newly added"""
         sentences, subject_entities, object_entities, labels, is_relation_labels = zip(*batch)
 
-        outs = self.tokenize(sentences, subject_entities, object_entities,is_relation_labels)
+        outs = self.tokenize(sentences, subject_entities, object_entities)
         labels = torch.tensor(labels)
         is_relation_labels = torch.tensor(is_relation_labels)
 
@@ -304,7 +304,35 @@ class MultipleHeadDataloader(BaseDataloader):
             num_labels = label_to_num(df["label"].values)
             df["label"] = num_labels
 
-        return df 
+        return df
+
+    def setup(self, stage="fit"):
+        if stage == "fit":
+            total_data = pd.read_csv(self.train_path)
+
+            if self.train_ratio == 1.0 :
+                val_ratio = 0.2
+                train_data, val_data = train_test_split(total_data, test_size=val_ratio)
+                train_data = total_data  
+            else:
+                train_data, val_data = train_test_split(total_data, train_size=self.train_ratio)
+
+            # new dataframe 
+            train_df = self.preprocess(train_data)
+            val_df = self.preprocess(val_data)
+
+            self.train_dataset = MultipleHeadDataset(train_df)
+            self.val_dataset = MultipleHeadDataset(val_df)
+
+        else:
+            test_data = pd.read_csv(self.test_path)
+            predict_data = pd.read_csv(self.predict_path)
+
+            test_df = self.preprocess(test_data)
+            predict_df = self.preprocess(predict_data)
+
+            self.test_dataset = MultipleHeadDataset(test_df)
+            self.predict_dataset = MultipleHeadDataset(predict_df)
 
 
 class BaseKFoldDataModule(pl.LightningDataModule, ABC):
