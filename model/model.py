@@ -100,18 +100,21 @@ class BaseModel(pl.LightningModule):
         self.log("val_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
         self.log("val_acc", metrics["accuracy"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
 
-        if len(self.valid_preds) == 0 and len(self.valid_labels) == 0:
-            self.valid_preds = pred["predictions"]
-            self.valid_labels = pred["label_ids"]
-        else:
-            self.valid_preds = np.concatenate((self.valid_preds, pred["predictions"]), axis=0)
-            self.valid_labels = np.concatenate((self.valid_labels, pred["label_ids"]), axis=0)
+        if self.val_cm:
+            if len(self.valid_preds) == 0 and len(self.valid_labels) == 0:
+                self.valid_preds = pred["predictions"]
+                self.valid_labels = pred["label_ids"]
+            else:
+                self.valid_preds = np.concatenate((self.valid_preds, pred["predictions"]), axis=0)
+                self.valid_labels = np.concatenate((self.valid_labels, pred["label_ids"]), axis=0)
 
         return loss
 
     def validation_epoch_end(self, outputs):
         if self.val_cm:
             utils.utils.get_confusion_matrix(self.valid_preds, self.valid_labels, "validation")
+            self.valid_preds = []
+            self.valid_labels = []
 
     def test_step(self, batch, batch_idx):
         tokens, labels = batch
@@ -124,16 +127,19 @@ class BaseModel(pl.LightningModule):
         self.log(f"test_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
         self.log(f"test_acc", metrics["accuracy"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
 
-        if len(self.test_preds) == 0 and len(self.test_labels) == 0:
-            self.test_preds = pred["predictions"]
-            self.test_labels = pred["label_ids"]
-        else:
-            self.test_preds = np.concatenate((self.test_preds, pred["predictions"]), axis=0)
-            self.test_labels = np.concatenate((self.test_labels, pred["label_ids"]), axis=0)
+        if self.test_cm:
+            if len(self.test_preds) == 0 and len(self.test_labels) == 0:
+                self.test_preds = pred["predictions"]
+                self.test_labels = pred["label_ids"]
+            else:
+                self.test_preds = np.concatenate((self.test_preds, pred["predictions"]), axis=0)
+                self.test_labels = np.concatenate((self.test_labels, pred["label_ids"]), axis=0)
 
     def test_epoch_end(self, outputs):
         if self.test_cm:
             utils.utils.get_confusion_matrix(self.test_preds, self.test_labels, "test")
+            self.test_preds = []
+            self.test_labels = []
 
     def predict_step(self, batch, batch_idx):
         tokens, _ = batch
@@ -152,13 +158,9 @@ class BaseModel(pl.LightningModule):
             optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
         if self.config.train.scheduler == "StepLR":
-            scheduler = torch.optim.lr_scheduler.StepLR(
-                optimizer, step_size=10, gamma=0.5
-            )
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
         elif self.config.train.scheduler == "LambdaLR":
-            scheduler = torch.optim.lr_scheduler.LambdaLR(
-                optimizer, lr_lambda=lambda epoch: 0.95**epoch
-            )
+            scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 0.95**epoch)
 
         return [optimizer], [scheduler]
 
