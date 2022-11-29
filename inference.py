@@ -7,9 +7,8 @@ from utils import utils
 
 def inference(args, config):
     trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1, deterministic=True)
-
+    dataloader, model = utils.new_instance(config)
     if args.mode in ["inference", "i"]:
-        dataloader, model = utils.new_instance(config)
         model, _, __ = utils.load_model(args, config, dataloader, model)
 
     if args.mode in ["all", "a"]:
