@@ -202,5 +202,5 @@ config/*
 !config/base_config.yaml
 outputs/
 
-data/*
+data/*.csv
 prediction/
