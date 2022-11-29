@@ -10,3 +10,5 @@ omegaconf==2.2.3
 torchmetrics==0.10.3
 regex==2022.10.31
 pyYAML==6.0
+matplotlib==3.6.2
+seaborn==0.12.1
