@@ -164,6 +164,104 @@ class BaseModel(pl.LightningModule):
         return [optimizer], [scheduler]
 
 
+class MultipleHeadModel(BaseModel):
+    def __init__(self, config, new_vocab_size):
+        super().__init__(config, new_vocab_size)
+        self.plm = AutoModel.from_pretrained(config.model.name) # pretrained language model
+        self.classifier_binary = self.build_classifier(config=self.lm.config, num_labels=2)
+        self.classifier_multi = self.build_classifier(config=self.lm.config, num_labels=3)
+
+        self.loss_fn = nn.CrossEntropyLoss()
+        
+        self.w_binary, self.w = 0.5, 0.5
+
+    def build_classifier(self, model_config, num_labels):
+        return nn.Sequential([
+            nn.Linear(model_config.hidden_size, model_config.hidden_size//2),
+            nn.ReLU(),
+            nn.Dropout(p=0.1),
+            nn.Linear(model_config.hidden_size//2, num_labels),
+            ])
+    
+    def training_step(self, batch, batch_idx):
+        tokens, labels, labels_binary  = batch
+        logits = self(tokens)
+
+        loss = self.loss_fn(logits, labels.long())
+        loss_binary = self.loss_fn(logits, labels.long())
+        loss_total = self.w * loss + self.w_binary * loss_binary 
+
+        self.log("train_loss", loss, on_step=True, prog_bar=True)
+        self.log("train_loss_binary", loss_binary, on_step=True, prog_bar=True)
+        self.log("train_loss_combined", loss_total, on_step=True, prog_bar=True)
+
+        pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
+        metrics = loss_module.compute_metrics(pred)
+        self.log("train_f1", metrics["micro f1 score"], on_step=True, on_epoch=False, prog_bar=True)
+        self.log("train_auprc", metrics["auprc"], on_step=True, on_epoch=False, prog_bar=True)
+
+    def validation_step(self, batch, batch_idx):
+        tokens, labels, labels_binary = batch
+        logits = self(tokens)
+
+        loss = self.loss_fn(logits, labels.long())
+        loss_binary = self.loss_fn(logits, labels.long())
+        loss_total = self.w * loss + self.w_binary * loss_binary 
+
+        self.log("val_loss", loss, on_step=self.config.utils.on_step, prog_bar=True)
+        self.log("val_loss_binary", loss_binary, on_step=self.config.utils.on_step, prog_bar=True)
+        self.log("val_loss_combined", loss_total, on_step=self.config.utils.on_step, prog_bar=True)
+
+        pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
+        metrics = loss_module.compute_metrics(pred)
+        self.log("val_f1", metrics["micro f1 score"], on_step=True, on_epoch=False, prog_bar=True)
+        self.log("val_auprc", metrics["auprc"], on_step=True, on_epoch=False, prog_bar=True)
+
+        if len(self.valid_preds) == 0 and len(self.valid_labels) == 0:
+            self.valid_preds = pred["predictions"]
+            self.valid_labels = pred["label_ids"]
+        else:
+            self.valid_preds = np.concatenate((self.valid_preds, pred["predictions"]), axis=0)
+            self.valid_labels = np.concatenate((self.valid_labels, pred["label_ids"]), axis=0)
+
+        return loss
+
+    def validation_epoch_end(self, outputs):
+        if self.val_cm:
+            utils.utils.get_confusion_matrix(self.valid_preds, self.valid_labels, "validation")
+
+    def test_step(self, batch, batch_idx):
+        """Log the original loss and metrics only"""
+        tokens, labels, _ = batch
+        logits = self(tokens)
+
+        pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
+        metrics = loss_module.compute_metrics(pred)
+        self.log(f"test_f1", metrics["micro f1 score"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
+        self.log(f"test_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
+        self.log(f"test_acc", metrics["accuracy"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
+
+        if len(self.test_preds) == 0 and len(self.test_labels) == 0:
+            self.test_preds = pred["predictions"]
+            self.test_labels = pred["label_ids"]
+        else:
+            self.test_preds = np.concatenate((self.test_preds, pred["predictions"]), axis=0)
+            self.test_labels = np.concatenate((self.test_labels, pred["label_ids"]), axis=0)
+
+    def test_epoch_end(self, outputs):
+        if self.test_cm:
+            utils.utils.get_confusion_matrix(self.test_preds, self.test_labels, "test")
+
+    def predict_step(self, batch, batch_idx):
+        tokens, *_ = batch
+        logits = self(tokens)
+
+        self.output_pred = np.argmax(logits.detach().cpu().numpy(), axis=-1)
+        self.output_prob = F.softmax(logits, dim=-1).detach().cpu().numpy()
+
+        return (self.output_pred, self.output_prob)
+
+
 class MultipleHeadRobertaModel(BaseModel):
 
     def __init__(self, conf, new_vocab_size):
@@ -206,7 +304,6 @@ class MultipleHeadRobertaModel(BaseModel):
         return final_loss   
 
     def validation_step(self, batch, batch_idx): # 😰
-        #input_ids, _ , attention_mask, labels, is_relation_labels = batch
         tokens, labels, is_relation_labels  = batch
         input_ids= tokens['input_ids']
         attention_mask =  tokens['attention_mask']
@@ -229,8 +326,6 @@ class MultipleHeadRobertaModel(BaseModel):
         return loss   
 
     def test_step(self, batch, batch_idx):
-        #input_ids, _, attention_mask, labels, is_relation_labels = batch
-        #logits_1, logits_2 = self((input_ids, attention_mask))
         tokens, labels, _  = batch
         input_ids= tokens['input_ids']
         attention_mask =  tokens['attention_mask']
@@ -243,8 +338,6 @@ class MultipleHeadRobertaModel(BaseModel):
         self.log("test_acc", metrics["accuracy"], on_step=True, prog_bar=True)
 
     def predict_step(self, batch, batch_idx):
-        #input_ids, attention_mask = batch
-        #logits_1, logits_2 = self((input_ids, attention_mask))
         tokens, *_ = batch
         input_ids= tokens['input_ids']
         attention_mask =  tokens['attention_mask']
