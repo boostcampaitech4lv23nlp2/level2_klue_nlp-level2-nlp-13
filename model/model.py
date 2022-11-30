@@ -42,7 +42,7 @@ class BaseModel(pl.LightningModule):
             self.freeze()
         self.plm.resize_token_embeddings(new_vocab_size)
 
-        print(self.plm.__dict__)
+        # print(self.plm.__dict__)
         self.loss_func = loss_module.loss_config[self.config.train.loss]
         self.val_cm = config.train.print_val_cm
         self.test_cm = config.train.print_test_cm
