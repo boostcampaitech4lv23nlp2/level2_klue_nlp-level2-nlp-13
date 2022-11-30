@@ -16,6 +16,7 @@ data:
 model:
   name: klue/roberta-large
   best_model_path: ./best_model
+  entity_embedding_layer: True
   
 train:
   seed: 42

@@ -9,7 +9,6 @@ from transformers import (
     AutoTokenizer,
     AutoConfig,
     AutoModelForSequenceClassification,
-    Trainer,
     TrainingArguments,
     EarlyStoppingCallback,
 )
@@ -20,7 +19,7 @@ from trainer.trainer import CustomTrainer
 from trainer.metrics import compute_metrics
 from trainer.optimizer import get_optimizer, get_scheduler
 from data.utils.entity_marker import add_special_tokens
-
+from models.entity_embeddings import CustomRobertaEmbeddings
 
 def seed_everything(seed):
     random.seed(seed)
@@ -41,7 +40,7 @@ def main(config):
     tokenizer = AutoTokenizer.from_pretrained(
         config.model.name, add_special_tokens=True
     )
-    # Entity Marker를 적용할 경우
+    # Entity Marker를 적용할 경우 tokenizer에 special token 추가
     if config.data.entity_marker_type is not None:
         added_token_num, tokenizer = add_special_tokens(
             config.data.entity_marker_type, tokenizer
@@ -62,11 +61,18 @@ def main(config):
     model = AutoModelForSequenceClassification.from_pretrained(
         config.model.name, config=model_config
     )
+    # Roberta Entity embedding layer를 추가할 경우
+    if config.model.name == "klue/roberta-large" and config.model.entity_embedding_layer:
+        embedding_config = AutoConfig.from_pretrained(config.model.name)
+        model.roberta.embeddings = CustomRobertaEmbeddings(embedding_config)
+
     # Entity Marker를 적용할 경우
     if config.data.entity_marker_type is not None:
         model.resize_token_embeddings(tokenizer.vocab_size + added_token_num)
     model.parameters
     model.to(device)
+
+    print(model) # ERASE LATER🥺
 
     print("\033[38;2;31;169;250m" + "get trainer" + "\033[0m")
     # optimizer = get_optimizer(model, config) # 현재 사용하지 않음
