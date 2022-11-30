@@ -1,253 +1,136 @@
-import datetime
-import logging
+import argparse
+import os
+import random
 
-import pytorch_lightning as pl
-import pytz
+import numpy as np
 import torch
-from pytorch_lightning.loggers import WandbLogger
-
+from omegaconf import OmegaConf
+from transformers import (
+    AutoTokenizer,
+    AutoConfig,
+    AutoModelForSequenceClassification,
+    Trainer,
+    TrainingArguments,
+    EarlyStoppingCallback,
+)
 import wandb
-from data_loader.data_loaders import KfoldDataloader
-from model import model as module_arch
-from utils import logger, utils
+
+from dataloader.dataset import load_train_dev_data, RE_Dataset, RE_Collator
+from trainer.trainer import CustomTrainer
+from trainer.metrics import compute_metrics
+from trainer.optimizer import get_optimizer, get_scheduler
+from data.utils.entity_marker import add_special_tokens
 
 
-def train(config):
-    now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d-%H:%M:%S")
+def seed_everything(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # if use multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+def main(config):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print("device : ", device)
+
+    print("\033[38;2;31;169;250m" + "get dataset" + "\033[0m")
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.model.name, add_special_tokens=True
+    )
+    # Entity Marker를 적용할 경우
+    if config.data.entity_marker_type is not None:
+        added_token_num, tokenizer = add_special_tokens(
+            config.data.entity_marker_type, tokenizer
+        )
+
+    tokenized_train, train_label = load_train_dev_data(config.path.train_path)
+    tokenized_dev, dev_label = load_train_dev_data(config.path.dev_path)
+
+    RE_train_dataset = RE_Dataset(tokenized_train, train_label)
+    RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
+
+    RE_collator = RE_Collator(tokenizer)
+
+    print("\033[38;2;31;169;250m" + "get model" + "\033[0m")
+    model_config = AutoConfig.from_pretrained(config.model.name)
+    model_config.num_labels = 30
+
+    model = AutoModelForSequenceClassification.from_pretrained(
+        config.model.name, config=model_config
+    )
+    # Entity Marker를 적용할 경우
+    if config.data.entity_marker_type is not None:
+        model.resize_token_embeddings(tokenizer.vocab_size + added_token_num)
+    model.parameters
+    model.to(device)
+
+    print("\033[38;2;31;169;250m" + "get trainer" + "\033[0m")
+    # optimizer = get_optimizer(model, config) # 현재 사용하지 않음
+    # scheduler = get_scheduler(optimizer, config)
+    # optimizers = (optimizer, scheduler)
+
+    training_args = TrainingArguments(
+        output_dir=config.train.checkpoints_dir,
+        save_total_limit=config.train.save_total_limits,
+        save_steps=config.train.save_steps,
+        num_train_epochs=config.train.num_train_epochs,
+        learning_rate=config.train.learning_rate,
+        per_device_train_batch_size=config.train.train_batch_size,
+        per_device_eval_batch_size=config.train.eval_batch_size,
+        warmup_steps=config.train.warmup_steps,
+        weight_decay=config.train.weight_decay,
+        logging_dir=config.train.logging_dir,
+        logging_steps=config.train.logging_steps,
+        evaluation_strategy=config.train.evaluation_strategy,
+        eval_steps=config.train.eval_steps,
+        load_best_model_at_end=config.train.load_best_model_at_end,
+        report_to="wandb",
+        run_name=f"{config.wandb.name}_{config.wandb.info}",
+        fp16=True,
+        fp16_opt_level="01",
+    )
+
     wandb.init(
         entity=config.wandb.team_account_name,
         project=config.wandb.project_repo,
-        name=f"{config.wandb.name}_{config.wandb.info}_{now_time}",
+        name=training_args.run_name,
     )
+    wandb.config.update(training_args)
 
-    dataloader, model = utils.new_instance(config)
-    assert config.k_fold.use_k_fold == isinstance(
-        dataloader, KfoldDataloader
-    ), "Check your config again: Make sure `k_fold.use_k_fold` is compatible with `dataloader.architecture`"
-
-    wandb_logger = WandbLogger(log_model="all")
-    save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
-    wandb_logger.experiment.config.update({"save_dir": save_path})
-    trainer = pl.Trainer(
-        accelerator="gpu",
-        devices=1,
-        max_epochs=config.train.max_epoch,
-        log_every_n_steps=1,
-        logger=wandb_logger,
-        deterministic=True,
-        precision=config.utils.precision,
-        num_sanity_val_steps=int(config.k_fold.use_k_fold is not True),
+    trainer = CustomTrainer(
+        config=config,
+        model=model,
+        args=training_args,
+        train_dataset=RE_train_dataset,
+        eval_dataset=RE_dev_dataset,
+        compute_metrics=compute_metrics,
+        data_collator=RE_collator,
+        # optimizers=optimizers, # FIX: valid 학습이 안됨 어디가 잘못되었는지 확인필요
         callbacks=[
-            utils.early_stop(
-                monitor=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["monitor"],
-                mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
-                patience=config.utils.patience,
-            ),
-            utils.best_save(
-                save_path=save_path,
-                top_k=config.utils.top_k,
-                monitor=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["monitor"],
-                mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
-                filename="{epoch}-{step}-{val_loss}-{val_f1}",
-            ),
-        ]
-        if not config.k_fold.use_k_fold
-        else [
-            utils.early_stop(
-                monitor=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["monitor"],
-                mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
-                patience=config.utils.patience,
+            EarlyStoppingCallback(
+                early_stopping_patience=config.train.early_stopping_patience
             )
         ],
     )
 
-    if config.k_fold.use_k_fold:
-        if config.utils.on_step is False:
-            assert config.utils.patience >= config.k_fold.num_folds, "The given 'config.utils.patience' is way too low."
-        internal_fit_loop = trainer.fit_loop
-        trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=save_path)
-        trainer.fit_loop.connect(internal_fit_loop)
-        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
-    else:
-        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
-        trainer.test(model=model, datamodule=dataloader)  # K-fold CV runs test_step internally as part of fitting step
-
-    wandb.finish()
-    config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
-    logger.log_config_yaml(config, save_path)
-
-    # trainer.save_checkpoint(save_path + "model.ckpt")
-    # model.plm.save_pretrained(save_path)
-    # torch.save(model, save_path + "model.pt")
+    print("\033[38;2;31;169;250m" + "Training start" + "\033[0m")
+    trainer.train()
+    model.save_pretrained("./best_model")
 
 
-# def continue_train(args, config):
-#     now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
-#     wandb.init(
-#         entity=config.wandb.team_account_name,
-#         project=config.wandb.project_repo,
-#         name=f"{config.wandb.name}_{config.wandb.info}",
-#     )
-#     dataloader, model = utils.new_instance(config)
-#     model, args, config = utils.load_model(args, config, dataloader, model)
-#     wandb_logger = WandbLogger(project=config.wandb.project)
+if __name__ == "__main__":
+    # config 설정
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, default="base_config")
 
-#     save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}_{now_time}/"
-#     trainer = pl.Trainer(
-#         accelerator="gpu",
-#         devices=1,
-#         max_epochs=config.train.max_epoch,
-#         log_every_n_steps=1,
-#         logger=wandb_logger,
-#         callbacks=[
-#             utils.early_stop(
-#                 monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-#                 patience=config.utils.patience,
-#                 mode=utils.monitor_config[config.utils.monitor]["mode"],
-#             ),
-#             utils.best_save(
-#                 save_path=save_path,
-#                 top_k=config.utils.top_k,
-#                 monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-#                 mode=utils.monitor_config[config.utils.monitor]["mode"],
-#                 filename="{epoch}-{step}-{val_loss}-{val_f1}",
-#             ),
-#         ],
-#     )
+    args, _ = parser.parse_known_args()
+    config = OmegaConf.load(f"./configs/{args.config}.yaml")
 
-#     trainer.fit(model=model, datamodule=dataloader)
-#     trainer.test(model=model, datamodule=dataloader)
-#     wandb.finish()
+    # seed 설정
+    seed_everything(config.train.seed)
 
-#     trainer.save_checkpoint(save_path + "model.ckpt")
-#     model.plm.save_pretrained(save_path)
-#     # torch.save(model, save_path + "model.pt")
-
-
-# def k_train(config):
-#     project_name = config.wandb.project
-
-#     results = []
-#     num_folds = config.k_fold.num_folds
-
-#     exp_name = WandbLogger(project=project_name).experiment.name
-#     for k in range(num_folds):
-#         k_datamodule = KfoldDataloader(k, config)
-
-#         Kmodel = module_arch.Model(
-#             config.model.name,
-#             config.train.learning_rate,
-#             config.train.loss,
-#             k_datamodule.new_vocab_size,
-#             config.train.use_frozen,
-#         )
-
-#         if k + 1 == 1:
-#             name_ = f"{k+1}st_fold"
-#         elif k + 1 == 2:
-#             name_ = f"{k+1}nd_fold"
-#         elif k + 1 == 3:
-#             name_ = f"{k+1}rd_fold"
-#         else:
-#             name_ = f"{k+1}th_fold"
-#         wandb_logger = WandbLogger(project=project_name, name=exp_name + f"_{name_}")
-#         save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}_{name_}/"
-#         trainer = pl.Trainer(
-#             accelerator="gpu",
-#             devices=1,
-#             max_epochs=config.train.max_epoch,
-#             log_every_n_steps=1,
-#             logger=wandb_logger,
-#             deterministic=True,
-#             precision=config.utils.precision,
-#             callbacks=[
-#                 utils.early_stop(
-#                     monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-#                     patience=config.utils.patience,
-#                     mode=utils.monitor_config[config.utils.monitor]["mode"],
-#                 ),
-#                 utils.best_save(
-#                     save_path=save_path,
-#                     top_k=config.utils.top_k,
-#                     monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-#                     mode=utils.monitor_config[config.utils.monitor]["mode"],
-#                     filename="{epoch}-{step}-{val_loss}-{val_f1}",
-#                 ),
-#             ],
-#         )
-
-#         trainer.fit(model=Kmodel, datamodule=k_datamodule)
-#         score = trainer.test(model=Kmodel, datamodule=k_datamodule)
-#         wandb.finish()
-
-#         results.extend(score)
-#         # torch.save(Kmodel, save_path + f"{name_} model.pt")
-#         trainer.save_checkpoint(save_path + f"{name_} model.ckpt")
-
-#     result = [x["test_pearson"] for x in results]
-#     score = sum(result) / num_folds
-#     print(f"{num_folds}-fold pearson 평균 점수: {score}")
-
-
-def sweep(config, exp_count):
-    project_name = config.wandb.project
-
-    sweep_config = {
-        "method": "bayes",
-        "parameters": {
-            "lr": {
-                "distribution": "uniform",
-                "min": 1e-5,
-                "max": 3e-5,
-            },
-        },
-        "early_terminate": {
-            "type": "hyperband",
-            "max_iter": 30,
-            "s": 2,
-        },
-    }
-
-    sweep_config["metric"] = {"name": "test_pearson", "goal": "maximize"}
-
-    def sweep_train(config=None):
-        wandb.init(config=config)
-        config = wandb.config
-
-        dataloader, model = utils.new_instance(config, config=None)
-
-        wandb_logger = WandbLogger(project=project_name)
-        save_path = f"{config.path.save_path}{config.model.name}_sweep_id_{wandb.run.name}/"
-        trainer = pl.Trainer(
-            gpus=1,
-            max_epochs=config.train.max_epoch,
-            logger=wandb_logger,
-            log_every_n_steps=1,
-            deterministic=True,
-            precision=config.utils.precision,
-            callbacks=[
-                utils.early_stop(
-                    monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-                    patience=config.utils.patience,
-                    mode=utils.monitor_config[config.utils.monitor]["mode"],
-                ),
-                utils.best_save(
-                    save_path=save_path,
-                    top_k=config.utils.top_k,
-                    monitor=utils.monitor_config[config.utils.monitor]["monitor"],
-                    mode=utils.monitor_config[config.utils.monitor]["mode"],
-                    filename="{epoch}-{step}-{val_loss}-{val_f1}",
-                ),
-            ],
-        )
-        trainer.fit(model=model, datamodule=dataloader)
-        trainer.test(model=model, datamodule=dataloader)
-        trainer.save_checkpoint(save_path + "model.ckpt")
-        # torch.save(model, save_path + "model.pt")
-
-    sweep_id = wandb.sweep(
-        sweep=sweep_config,
-        project=project_name,
-    )
-
-    wandb.agent(sweep_id=sweep_id, function=sweep_train, count=exp_count)
+    main(config)

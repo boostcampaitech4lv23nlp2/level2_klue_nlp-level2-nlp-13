@@ -1,0 +1,36 @@
+wandb:
+  team_account_name: next-level-potato # 팀 계정
+  project_repo: RE  # 프로젝트 레포 이름
+  name: name # 실험자 명
+  info: base_config # 실험명
+path:
+  train_path: ./data/preprocessed_data/train.typed_entity_marker_punc_3.csv  #./data/preprocessed_data/train_aug_ver1.csv
+  dev_path: ./data/preprocessed_data/valid.typed_entity_marker_punc_3.preprocessed.csv
+  test_path: ./data/raw_data/test_data.csv
+data:
+  shuffle: True
+  entity_marker_type: "typed_entity_marker" # None, entity_marker, entity_marker_punc, typed_entity_marker, typed_entity_makrer_punc_1~3
+model:
+  name: klue/roberta-large
+  best_model_path: ./best_model
+train:
+  seed: 42
+  checkpoints_dir : "./checkpoints"
+  save_total_limits : 3
+  save_steps : 1000
+  num_train_epochs : 5
+  early_stopping_patience : 4  # early stopping
+  get_cm : False # wandb에서 confusion matrix를 그릴지 여부
+  loss_fn : FocalLoss
+  optimizer : AdamW # Trainer default: AdamW
+  scheduler : LambdaLR # Trainer default: LambdaLR
+  learning_rate : 1e-5
+  train_batch_size : 8
+  eval_batch_size : 8
+  warmup_steps : 500
+  weight_decay: 0.01
+  logging_dir : "./logs"
+  logging_steps : 100
+  evaluation_strategy : "steps"
+  eval_steps : 500
+  load_best_model_at_end : True
