@@ -49,7 +49,15 @@ def main(config):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     ### Load Tokenizer ###
-    tokenizer = AutoTokenizer.from_pretrained(config.model.name)
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.model.name, add_special_tokens=True
+    )
+    # Entity Marker를 적용할 경우
+    if config.data.entity_marker_type is not None:
+        added_token_num, tokenizer = add_special_tokens(
+            config.data.entity_marker_type, tokenizer
+        )
+        
     ### Load Model ###
     model = AutoModelForSequenceClassification.from_pretrained(
         config.model.best_model_path
