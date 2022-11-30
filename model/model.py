@@ -185,9 +185,9 @@ class EnsembleVotingModel(pl.LightningModule):
         logits = torch.stack([m(tokens) for m in self.models]).mean(0)
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        self.log(f"ensemble_f1", metrics["micro f1 score"], prog_bar=True)
-        self.log(f"ensemble_auprc", metrics["auprc"], prog_bar=True)
-        self.log(f"ensemble_acc_fold", metrics["accuracy"], prog_bar=True)
+        self.log(f"ensemble_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
+        self.log(f"ensemble_auprc", metrics["auprc"], on_step=True, prog_bar=True)
+        self.log(f"ensemble_acc_fold", metrics["accuracy"], on_step=True, prog_bar=True)
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         tokens, _ = batch
