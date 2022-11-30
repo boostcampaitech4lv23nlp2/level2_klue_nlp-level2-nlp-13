@@ -11,9 +11,9 @@ from model.model import EnsembleVotingModel
 from data_loader.data_loaders import KfoldDataloader
 from pytorch_lightning.loggers import WandbLogger
 
-Focal Loss + TAPT
+
 def inference(args, config):
-    assert config.ensemble.use_ensemble is True  
+    assert config.ensemble.use_ensemble is True
 
     now_time = datetime.datetime.now(pytz.timezone("Asia/Seoul")).strftime("%Y-%m-%d-%H:%M:%S")
     wandb.init(
@@ -31,10 +31,8 @@ def inference(args, config):
 
     model = EnsembleVotingModel(model, ckpt_paths)
 
-    # trainer.test(model=model, datamodule=dataloader)
-    output = trainer.predict(
-        model=model, datamodule=dataloader
-    )
+    trainer.test(model=model, datamodule=dataloader)
+    output = trainer.predict(model=model, datamodule=dataloader)
 
     pred_answer, output_prob = zip(*output)
     pred_answer = np.concatenate(pred_answer).tolist()
@@ -100,11 +98,11 @@ def _preprocess(config):
     for i, df in enumerate(dfs):
         if not sanity_check(df):
             raise Exception(f"\u26A0 The following csv file fails the sanity check: {paths[i]} \u26A0")
-        df["probs"] = df["probs"].apply(lambda row: eval(row)) # convert to list of float
-        df[utils.num_to_label(np.arange(30))] = pd.DataFrame(df.probs.tolist(), index = df.index)
+        df["probs"] = df["probs"].apply(lambda row: eval(row))  # convert to list of float
+        df[utils.num_to_label(np.arange(30))] = pd.DataFrame(df.probs.tolist(), index=df.index)
         new_dfs.append(df)
 
-    return new_dfs 
+    return new_dfs
 
 
 def sanity_check(df):
@@ -122,7 +120,7 @@ def sanity_check(df):
     ## whether predicted probabilities sum up to 1
     def sums_up(row, eps=1e-5):
         probs = eval(row["probs"])
-        return 1 if 1 - sum(probs) < eps else 0
+        return 1 if abs(1 - sum(probs)) < eps else 0
 
     if not all(df.apply(sums_up, axis=1)):
         return False
