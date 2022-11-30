@@ -1,20 +1,29 @@
+import argparse
 import os
+import random
 
 import numpy as np
 import pandas as pd
-import pytorch_lightning as pl
+import torch
+import torch.nn.functional as F
+from omegaconf import OmegaConf
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from dataloader.dataset import RE_Dataset, RE_Collator, load_test_data, num_to_label
+from data.utils.entity_marker import add_special_tokens
 
+def seed_everything(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # if use multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
-def inference(args, config):
-    trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1, deterministic=True)
-    dataloader, model = utils.new_instance(config)
-    if args.mode in ["inference", "i"]:
-        model, _, __ = utils.load_model(args, config, dataloader, model)
-
-    if args.mode in ["all", "a"]:
-        model.load_from_checkpoint(config.path.best_model_path)
 
 def inference(model, tokenizer, sentences, device):
     dataloader = DataLoader(
@@ -57,7 +66,7 @@ def main(config):
         added_token_num, tokenizer = add_special_tokens(
             config.data.entity_marker_type, tokenizer
         )
-        
+
     ### Load Model ###
     model = AutoModelForSequenceClassification.from_pretrained(
         config.model.best_model_path
@@ -74,7 +83,7 @@ def main(config):
 
     output = pd.DataFrame(
         {
-            "id": range(len(pred_answer)),
+            "id": test_id,
             "pred_label": pred_answer,
             "probs": output_prob,
         }
@@ -82,7 +91,20 @@ def main(config):
 
     if not os.path.isdir("prediction"):
         os.mkdir("prediction")
-    path = args.saved_model if args.saved_model is not None else config.path.best_model_path
-    run_name = config.model.name + path.split("/")[-1]
-    run_name = run_name.replace("/", "-")
-    output.to_csv(f"./prediction/submission_{run_name}.csv", index=False)
+    output.to_csv(
+        "./prediction/submission.csv", index=False
+    )  # 최종적으로 완성된 예측한 라벨 csv 파일 형태로 저장
+
+
+if __name__ == "__main__":
+    # config 설정
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, default="base_config")
+
+    args, _ = parser.parse_known_args()
+    config = OmegaConf.load(f"./configs/{args.config}.yaml")
+
+    # seed 설정
+    seed_everything(config.train.seed)
+
+    main(config)

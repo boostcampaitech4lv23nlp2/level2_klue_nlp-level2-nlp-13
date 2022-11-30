@@ -1,18 +1,22 @@
 wandb:
   team_account_name: next-level-potato # 팀 계정
-  project_repo: RE  # 프로젝트 레포 이름
-  name: name # 실험자 명
-  info: base_config # 실험명
+  project_repo: RE_BH  # 프로젝트 레포 이름
+  name: kbh # 실험자 명
+  info: testing # 실험명
+
 path:
-  train_path: ./data/preprocessed_data/train.typed_entity_marker_punc_3.csv  #./data/preprocessed_data/train_aug_ver1.csv
-  dev_path: ./data/preprocessed_data/valid.typed_entity_marker_punc_3.preprocessed.csv
-  test_path: ./data/raw_data/test_data.csv
+  train_path: ./data/preprocessed_data/train.typed_entity_marker.csv 
+  dev_path: ./data/preprocessed_data/valid02.typed_entity_marker.csv
+  test_path: ./data/preprocessed_data/test.typed_entity_marker.csv
+
 data:
   shuffle: True
   entity_marker_type: "typed_entity_marker" # None, entity_marker, entity_marker_punc, typed_entity_marker, typed_entity_makrer_punc_1~3
+
 model:
   name: klue/roberta-large
   best_model_path: ./best_model
+  
 train:
   seed: 42
   checkpoints_dir : "./checkpoints"
