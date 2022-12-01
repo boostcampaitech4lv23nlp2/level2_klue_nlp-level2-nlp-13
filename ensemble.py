@@ -72,11 +72,11 @@ def ensemble_csvs(paths):
     total_df["probs"] = total_df.groupby("id")["probs"].apply("mean")
     max_indices = total_df["probs"].apply(np.argmax).to_list()
     total_df["pred_label"] = utils.num_to_label(max_indices)
-    total_df["probs"] = total_df["probs"].apply(list)
+
     return total_df
 
 
-def _sanity_check(df):
+def _sanity_check(df: pd.DataFrame):
     """
     리더보드가 제시하는 기준 만족하는지 체크
         1. csv의 column이 id, pred_label, probs로만 구성되어 있는지 확인

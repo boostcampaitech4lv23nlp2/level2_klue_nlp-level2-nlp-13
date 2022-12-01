@@ -57,6 +57,7 @@ if __name__ == "__main__":
 
     elif args.mode == "ensemble":
         import ensemble
+        import re
 
         assert config.ensemble.use_ensemble is True
         assert any(config.ensemble.ckpt_paths) + any(config.ensemble.csv_paths) == 1
@@ -67,9 +68,10 @@ if __name__ == "__main__":
 
         elif any(config.ensemble.csv_paths):
             df = ensemble.ensemble_csvs(config.ensemble.csv_paths)
-            print(df.head())
-            for i, row in df.iterrows():
-                assert abs(sum(row["probs"]) - 1.0) < 1e-5
+            df["probs"] = df["probs"].apply(list).apply(str)
+            if ensemble._sanity_check(df):
+                save_name = "_".join([re.search(r".+(?=\.csv)", path.split("/")[-1]).group() for path in config.ensemble.csv_paths])
+                df.to_csv(f"./prediction/ensemble_{save_name}.csv", index=False)
 
     elif args.mode == "all" or args.mode == "a":
         if args.saved_model is not None:
