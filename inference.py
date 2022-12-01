@@ -9,10 +9,12 @@ import torch.nn.functional as F
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
 
 from dataloader.dataset import RE_Dataset, RE_Collator, load_test_data, num_to_label
 from data.utils.entity_marker import add_special_tokens
+from models.entity_embeddings import CustomRobertaEmbeddings
+from models.get_model import get_model
 
 def seed_everything(seed):
     random.seed(seed)
@@ -68,10 +70,11 @@ def main(config):
         )
 
     ### Load Model ###
-    model = AutoModelForSequenceClassification.from_pretrained(
-        config.model.best_model_path
-    )
+    model = get_model(config, tokenizer, added_token_num)
+    model.load_state_dict(torch.load("./best_model/pytorch_model.bin"), strict=False)
+
     model.to(device)
+    print(model)
 
     ### Load Dataset ###
     test_id, test_data, test_label = load_test_data(config.path.test_path)
