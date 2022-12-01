@@ -72,6 +72,7 @@ def ensemble_csvs(paths):
     total_df["probs"] = total_df.groupby("id")["probs"].apply("mean")
     max_indices = total_df["probs"].apply(np.argmax).to_list()
     total_df["pred_label"] = utils.num_to_label(max_indices)
+    total_df["probs"] = total_df["probs"].apply(list)
     return total_df
 
 
