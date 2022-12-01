@@ -16,7 +16,7 @@ class CustomRobertaEmbeddings(nn.Module):
         )
         ###### Added Entity Embedding Layer ######
         ## 0:Niether, 1:subject, 2:object, 3~10: <S:{type}> <O:{type}> type:["PER", "ORG", "POH", "DAT", "LOC", "NOH"]
-        self.entity_type_embeddings = nn.Embedding(10, config.hidden_size)
+        self.entity_type_embeddings = nn.Embedding(11, config.hidden_size)
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
