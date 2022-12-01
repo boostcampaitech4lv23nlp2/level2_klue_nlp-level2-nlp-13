@@ -8,8 +8,8 @@ import pandas as pd
 import pytorch_lightning as pl
 from utils import utils
 from model.model import EnsembleVotingModel
-from data_loader.data_loaders import KfoldDataloader
 from pytorch_lightning.loggers import WandbLogger
+from sklearn.ensemble import RandomForestClassifier
 
 
 def inference(args, config):
@@ -25,7 +25,7 @@ def inference(args, config):
     save_path = f"{config.path.save_path}ensemble/{wandb_logger.experiment.name}/"
     wandb_logger.experiment.config.update({"save_dir": save_path})
 
-    trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1)
+    trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1, logger=wandb_logger)
     dataloader, model = utils.new_instance(config)
     ckpt_paths = [re.sub(r".+(?=saved_models)", "", path) for path in config.ensemble.ckpt_paths]
 
@@ -102,3 +102,8 @@ def _sanity_check(df: pd.DataFrame):
         print(f"\u26A0 The number of prediction labels is {pred_n} \u26A0")
 
     return True
+
+
+def run_random_forest(df: pd.DataFrame, sample_weight, max_depth=4):
+    clf = RandomForestClassifier(max_depth=max_depth)
+    clf.fit()
