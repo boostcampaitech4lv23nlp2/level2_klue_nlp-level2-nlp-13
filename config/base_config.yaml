@@ -32,6 +32,8 @@ train:
   use_frozen: False
   print_val_cm: True
   print_test_cm: True
+  optimizer: AdamW
+  scheduler: StepLR
   
 utils:
   seed: 42
