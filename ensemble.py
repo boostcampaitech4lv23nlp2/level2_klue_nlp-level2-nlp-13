@@ -52,60 +52,30 @@ def inference(args, config):
 
     output.to_csv(f"./prediction/submission_{wandb_logger.experiment.name}.csv", index=False)
 
-    # for i, path in enumerate(ckpt_paths):
-    #     trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1)
-    #     dataloader, model = utils.new_instance(config)
-    #     model, _, __ = utils.load_model(args, config, dataloader, model)
-    #     # trainer.test(model=model, datamodule=dataloader)
-    #     output = trainer.predict(model=model, datamodule=dataloader, ckpt_path=path)
 
-    #     pred_answer, output_prob = zip(*output)
-    #     pred_answer = np.concatenate(pred_answer).tolist()
-    #     output_prob = np.concatenate(output_prob, axis=0).tolist()
-    #     pred_answer = utils.num_to_label(pred_answer)
-
-    #     output = pd.DataFrame(
-    #         {
-    #             "id": range(len(pred_answer)),
-    #             "pred_label": pred_answer,
-    #             "probs": output_prob,
-    #         }
-    #     )
-
-    #     if not os.path.isdir("prediction"):
-    #         os.mkdir("prediction")
-
-    #     output.to_csv(f"./prediction/submission_kfold_{i}.csv", index=False)
-
-
-# def compare(df, standard: pd.DataFrame):
-#     """
-#     리더보드에서 최고점을 받은 submission (df로 변환)를 기준으로 제출할 `df`를 평가
-#     """
-
-
-def _preprocess(config):
+def ensemble_csvs(paths):
     """
     `probs`은 평균을 내 계산하여 가장 높은 확률을 가진 pred_label을 return
     """
-    import numpy as np
-
-    paths = list(config.ensemble.ckpt_paths)
     assert len(paths) > 1, "There must be more than 1 path."
 
     dfs = [pd.read_csv(path) for path in paths]
     new_dfs = []
     for i, df in enumerate(dfs):
-        if not sanity_check(df):
+        if not _sanity_check(df):
             raise Exception(f"\u26A0 The following csv file fails the sanity check: {paths[i]} \u26A0")
-        df["probs"] = df["probs"].apply(lambda row: eval(row))  # convert to list of float
-        df[utils.num_to_label(np.arange(30))] = pd.DataFrame(df.probs.tolist(), index=df.index)
+
+        df["probs"] = df["probs"].apply(lambda row: np.array(eval(row)))  # convert to list of float
+        # df[utils.num_to_label(np.arange(30))] = pd.DataFrame(df.probs.tolist(), index=df.index)
         new_dfs.append(df)
+    total_df = pd.concat(new_dfs)
+    total_df["probs"] = total_df.groupby("id")["probs"].apply("mean")
+    max_indices = total_df["probs"].apply(np.argmax).to_list()
+    total_df["pred_label"] = utils.num_to_label(max_indices)
+    return total_df
 
-    return new_dfs
 
-
-def sanity_check(df):
+def _sanity_check(df):
     """
     리더보드가 제시하는 기준 만족하는지 체크
         1. csv의 column이 id, pred_label, probs로만 구성되어 있는지 확인

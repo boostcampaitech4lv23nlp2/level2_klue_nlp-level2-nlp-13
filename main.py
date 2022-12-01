@@ -29,7 +29,7 @@ if __name__ == "__main__":
     config = OmegaConf.load(f"./config/{args.config}.yaml")
 
     SEED = config.utils.seed
-    pl.seed_everything(SEED, workers=True) # covers torch, numpy, random
+    pl.seed_everything(SEED, workers=True)  # covers torch, numpy, random
     # random.seed(SEED)
     # np.random.seed(SEED)
     # torch.manual_seed(SEED)
@@ -57,8 +57,20 @@ if __name__ == "__main__":
 
     elif args.mode == "ensemble":
         import ensemble
-        ensemble.inference(args, config)
-    
+
+        assert config.ensemble.use_ensemble is True
+        assert any(config.ensemble.ckpt_paths) + any(config.ensemble.csv_paths) == 1
+
+        if any(config.ensemble.ckpt_paths):
+            assert config.ensemble.architecture == "EnsembleVotingModel"
+            ensemble.inference(args, config)
+
+        elif any(config.ensemble.csv_paths):
+            df = ensemble.ensemble_csvs(config.ensemble.csv_paths)
+            print(df.head())
+            for i, row in df.iterrows():
+                assert abs(sum(row["probs"]) - 1.0) < 1e-5
+
     elif args.mode == "all" or args.mode == "a":
         if args.saved_model is not None:
             print("Cannot input 'saved_model' for 'all' mode")
