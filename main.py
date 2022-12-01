@@ -70,6 +70,7 @@ if __name__ == "__main__":
             df = ensemble.ensemble_csvs(config.ensemble.csv_paths)
             df["probs"] = df["probs"].apply(list).apply(str)
             if ensemble._sanity_check(df):
+                print(len(df))
                 save_name = "_".join([re.search(r".+(?=\.csv)", path.split("/")[-1]).group() for path in config.ensemble.csv_paths])
                 df.to_csv(f"./prediction/ensemble_{save_name}.csv", index=False)
 

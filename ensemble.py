@@ -69,11 +69,15 @@ def ensemble_csvs(paths):
         # df[utils.num_to_label(np.arange(30))] = pd.DataFrame(df.probs.tolist(), index=df.index)
         new_dfs.append(df)
     total_df = pd.concat(new_dfs)
-    total_df["probs"] = total_df.groupby("id")["probs"].apply("mean")
-    max_indices = total_df["probs"].apply(np.argmax).to_list()
-    total_df["pred_label"] = utils.num_to_label(max_indices)
+    new_total_df = pd.DataFrame()
+    # total_df["probs"] = total_df.groupby("id")["probs"].apply("mean")
 
-    return total_df
+    new_total_df["probs"] = total_df.groupby("id")["probs"].apply("mean")
+    max_indices = new_total_df["probs"].apply(np.argmax).to_list()
+    new_total_df["pred_label"] = utils.num_to_label(max_indices)
+    new_total_df["id"] = new_dfs[0].index
+    new_total_df = new_total_df[["id", "pred_label", "probs"]]
+    return new_total_df
 
 
 def _sanity_check(df: pd.DataFrame):
