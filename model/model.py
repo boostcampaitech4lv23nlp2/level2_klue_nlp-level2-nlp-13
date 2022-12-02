@@ -379,8 +379,8 @@ class AuxiliaryClassificationRobertaModel(BaseModel):
         self.plm = AuxiliaryClassificationRobertaForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path="klue/roberta-large"
         )
-        self.alpha = 0.3 # is_relation
-        self.beta = 0.7
+        self.alpha = 0.2 # is_relation
+        self.beta = 0.8
     
     def forward(self, x): 
         input_ids, attention_mask = x
