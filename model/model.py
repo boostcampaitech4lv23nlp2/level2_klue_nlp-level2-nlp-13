@@ -290,6 +290,7 @@ class KFoldLoop(Loop):
     def __setstate__(self, state: Dict[str, Any]) -> None:
         self.__dict__.update(state)
 
+
 class RobertaClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
