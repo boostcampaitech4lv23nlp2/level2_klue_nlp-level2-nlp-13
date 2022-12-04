@@ -13,9 +13,6 @@ from utils import logger, utils
 def train(config):
     logger = logger.init_logger(config)
     dataloader, model = utils.new_instance(config)
-    assert config.k_fold.use_k_fold == isinstance(
-        dataloader, KfoldDataloader
-    ), "Check your config again: Make sure `k_fold.use_k_fold` is compatible with `dataloader.architecture`"
     monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
     trainer = pl.Trainer(
         accelerator="gpu",
@@ -42,25 +39,51 @@ def train(config):
             ]
     )
 
-    if config.k_fold.use_k_fold:
-        if config.utils.on_step is False:
-            assert config.utils.patience >= config.k_fold.num_folds, "The given 'config.utils.patience' is way too low."
-        internal_fit_loop = trainer.fit_loop
-        trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=save_path)
-        trainer.fit_loop.connect(internal_fit_loop)
-        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
-    else:
-        trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
-        trainer.test(model=model, datamodule=dataloader)  # K-fold CV runs test_step internally as part of fitting step
+    trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
+    trainer.test(model=model, datamodule=dataloader) 
 
     wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
     logger.log_config_yaml(config, save_path)
 
-    # trainer.save_checkpoint(save_path + "model.ckpt")
-    # model.plm.save_pretrained(save_path)
-    # torch.save(model, save_path + "model.pt")
+def train_cv(config):
+    logger = logger.init_logger(config)
+    dataloader, model = utils.new_instance(config)
+    monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
+    trainer = pl.Trainer(
+        accelerator="gpu",
+        devices=1,
+        max_epochs=config.train.max_epoch,
+        log_every_n_steps=1,
+        logger=logger,
+        deterministic=True,
+        precision=config.utils.precision,
+        num_sanity_val_steps=int(config.k_fold.use_k_fold is not True),
+        callbacks=[
+            EarlyStopping(
+                monitor=monitor_configs["monitor"],
+                mode=monitor_configs["mode"],
+                patience=config.utils.patience,
+            ),
+            ModelCheckpoint(
+                save_path=save_path,
+                save_top_k=config.utils.top_k,
+                monitor=monitor_configs["monitor"],
+                mode=monitor_configs["mode"],
+                filename="{epoch}-{step}-{val_loss}-{val_f1}",
+            ),
+            ]
+    )
 
+    internal_fit_loop = trainer.fit_loop
+    trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=save_path)
+    trainer.fit_loop.connect(internal_fit_loop)
+    
+    # k-fold fit_loop runs its own test step as part of fit step
+    trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
+
+    wandb.finish()
+    config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
 
 def sweep(config, exp_count):
     project_name = config.wandb.project

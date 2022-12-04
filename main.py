@@ -30,22 +30,20 @@ if __name__ == "__main__":
 
     SEED = config.utils.seed
     pl.seed_everything(SEED, workers=True) # covers torch, numpy, random
-    # random.seed(SEED)
-    # np.random.seed(SEED)
-    # torch.manual_seed(SEED)
-    # torch.cuda.manual_seed(SEED)
-    # torch.cuda.manual_seed_all(SEED)
     torch.backends.cudnn.benchmark = False
     torch.use_deterministic_algorithms(True)
 
     if args.mode == "train" or args.mode == "t":
-        train.train(config)
-        # if config.k_fold.use_k_fold:
-        #     train.k_train(config)
-        # else:
-        #     train.train(config)
+        if config.k_fold.use_k_fold is True:
+            assert config.k_fold.use_k_fold == isinstance(dataloader, kfoldDataloader), "Check your config again: Make sure `config.k_fold.use_k_fold` is compatible with `config.datalaoder.architecture`"
+            if config.utils.on_step is False:
+                assert config.utils.patience >= config.k_fold.num_folds, "The given value for `config.utils.patience` should be higher than the number of folds"
+            train.train_cv(config)
+        else:
+            train.train(config)
 
-    elif args.mode == "exp" or args.mode == "e":
+    elif
+    args.mode == "exp" or args.mode == "e":
         exp_count = int(input("실험할 횟수를 입력해주세요 "))
         train.sweep(config, exp_count)
 
