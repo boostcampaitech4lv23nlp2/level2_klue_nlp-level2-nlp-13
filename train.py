@@ -39,7 +39,7 @@ def train(config):
             ]
     )
 
-    trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
+    trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
     trainer.test(model=model, datamodule=dataloader) 
 
     wandb.finish()
@@ -80,7 +80,7 @@ def train_cv(config):
     trainer.fit_loop.connect(internal_fit_loop)
     
     # k-fold fit_loop runs its own test step as part of fit step
-    trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
+    trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
 
     wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
