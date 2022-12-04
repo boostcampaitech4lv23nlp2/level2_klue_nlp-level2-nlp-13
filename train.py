@@ -1,4 +1,3 @@
-import logging
 import torch
 import pytorch_lightning as pl
 
@@ -48,7 +47,7 @@ def train(config):
     logger.save_config(config)
 
 def train_cv(config):
-    logger = logger.init_logger(config)
+    logger = Logging.init_logger(config)
     dataloader, model = utils.new_instance(config)
     monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
     trainer = pl.Trainer(
@@ -85,6 +84,7 @@ def train_cv(config):
 
     wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
+    logger.save_config(config)
 
 def sweep(config, exp_count):
     project_name = config.wandb.project
