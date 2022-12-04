@@ -15,22 +15,6 @@ import model.model as module_arch
 import wandb
 
 
-def early_stop(monitor, patience, mode):
-    early_stop_callback = EarlyStopping(monitor=monitor, min_delta=0.00, patience=patience, verbose=False, mode=mode)
-    return early_stop_callback
-
-
-def best_save(save_path, top_k, monitor, mode, filename):
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=save_path,
-        save_top_k=top_k,
-        monitor=monitor,
-        mode=mode,
-        filename=filename,
-    )
-    return checkpoint_callback
-
-
 def new_instance(config):
     dataloader = getattr(datamodule_arch, config.dataloader.architecture)(config)
     model = getattr(module_arch, config.model.architecture)(config, dataloader.new_vocab_size)
@@ -137,9 +121,8 @@ def get_confusion_matrix(pred, label_ids, mode=None):
     wandb.log({f"{mode} confusion_matrix": wandb.Image(fig)})
 
 
-# 모니터링 할 쌍들
 def monitor_config(key, on_step):
-    """Returns appropriate metric monitor setting."""
+    """Returns proper metric monitor-mode pair."""
     mapping = {
         "val_loss": {"monitor": "val_loss", "mode": "min"},
         "val_pearson": {"monitor": "val_pearson", "mode": "max"},
