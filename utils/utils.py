@@ -14,7 +14,7 @@ import wandb
 import pathlib
 import re
 
-def new_instance(config):
+def init_modules(config):
     dataloader = getattr(datamodule_arch, config.dataloader.architecture)(config)
     model = getattr(module_arch, config.model.architecture)(config, dataloader.new_vocab_size)
 

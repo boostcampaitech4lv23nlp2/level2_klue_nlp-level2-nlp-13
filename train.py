@@ -12,7 +12,7 @@ from utils.logging import Logging
 
 def train(config):
     logger = Logging.init_logger(config)
-    dataloader, model = utils.new_instance(config)
+    dataloader, model = utils.init_modules(config)
     monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
     trainer = pl.Trainer(
         accelerator="gpu",
@@ -48,7 +48,7 @@ def train(config):
 
 def train_cv(config):
     logger = Logging.init_logger(config)
-    dataloader, model = utils.new_instance(config)
+    dataloader, model = utils.init_modules(config)
     monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
     trainer = pl.Trainer(
         accelerator="gpu",
