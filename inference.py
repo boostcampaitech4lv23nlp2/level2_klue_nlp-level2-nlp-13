@@ -1,5 +1,4 @@
 import os
-
 import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
@@ -10,11 +9,7 @@ from utils import utils
 def inference(args, config):
     trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1, deterministic=True)
     dataloader, model = utils.new_instance(config)
-    if args.mode in ["inference", "i"]:
-        model, _, __ = utils.load_model(args, config, dataloader, model)
-
-    if args.mode in ["all", "a"]:
-        model.load_from_checkpoint(config.path.best_model_path)
+    model = utils.load_pretrained(model, config) 
 
     output = trainer.predict(model=model, datamodule=dataloader) # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html
     pred_answer, output_prob = zip(*output)

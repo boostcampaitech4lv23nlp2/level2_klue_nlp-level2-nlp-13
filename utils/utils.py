@@ -11,7 +11,8 @@ from sklearn.metrics import confusion_matrix
 import data_loader.data_loaders as datamodule_arch
 import model.model as module_arch
 import wandb
-
+import pathlib
+import re
 
 def new_instance(config):
     dataloader = getattr(datamodule_arch, config.dataloader.architecture)(config)
@@ -20,64 +21,22 @@ def new_instance(config):
     return dataloader, model
 
 
-def load_model(args, config, dataloader, model):
+def load_pretrained(model, config):
     """
-    불러온 모델이 저장되어 있는 디렉터리를 parsing함
-    ex) 'save_models/klue/roberta-small_maxEpoch1_batchSize32_blooming-wind-57'
+    Load weights of a pretrained language model.
     """
-    save_path = "/".join(args.saved_model.split("/")[:-1])
-
-    """
-    huggingface에 저장된 모델명을 parsing함
-    ex) 'klue/roberta-small'
-    """
-    model_name = "/".join(args.saved_model.split("/")[1:-1]).split("_")[0]
-
-    if args.saved_model.split(".")[-1] == "ckpt":
-        model = model.load_from_checkpoint(args.saved_model)
-    elif args.saved_model.split(".")[-1] == "pt" and args.mode != "continue train" and args.mode != "ct":
-        model = torch.load(args.saved_model)
+    if path:= config.get("path.best_model_path", None):
+       # if "all" mode
+       model = model.load_from_checkpoint(path)
     else:
-        exit("saved_model 파일 오류")
+        # if "inference" mode
+        path = config.path.ckpt_path
+        pretrained_model = torch.load(path)
+        if isinstance(pretrained_model, torch.nn.Module):
+            model.plm = model.load_state_dict(path, strict=False)
+            print(f"Replaced weights of {model.plm.__class__.__name__}")
 
-    config.path.save_path = save_path + "/"
-    config.model.model_name = "/".join(model_name.split("/")[1:])
-    return model, args, config
-
-
-def new_instance(config):
-
-    dataloader = getattr(datamodule_arch, config.dataloader.architecture)(config)
-
-    model = getattr(module_arch, config.model.architecture)(config, dataloader.new_vocab_size)
-
-    return dataloader, model
-
-
-def load_model(args, config, dataloader, model):
-    """
-    불러온 모델이 저장되어 있는 디렉터리를 parsing함
-    ex) 'save_models/klue/roberta-small_maxEpoch1_batchSize32_blooming-wind-57'
-    """
-    save_path = "/".join(args.saved_model.split("/")[:-1])
-
-    """
-    huggingface에 저장된 모델명을 parsing함
-    ex) 'klue/roberta-small'
-    """
-    model_name = "/".join(args.saved_model.split("/")[1:-1]).split("_")[0]
-
-    if args.saved_model.split(".")[-1] == "ckpt":
-        model = model.load_from_checkpoint(args.saved_model)
-    elif args.saved_model.split(".")[-1] == "pt" and args.mode != "continue train" and args.mode != "ct":
-        model = torch.load(args.saved_model)
-    else:
-        exit("saved_model 파일 오류")
-
-    config.path.save_path = save_path + "/"
-    config.model.model_name = "/".join(model_name.split("/")[1:])
-    return model, args, config
-
+    return model
 
 def text_preprocessing(sentence):
     # s = re.sub(r"!!+", "!!!", sentence)  # !한개 이상 -> !!! 고정
