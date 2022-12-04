@@ -2,9 +2,9 @@ import logging
 import torch
 import pytorch_lightning as pl
 
+from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from pytorch_lightning.loggers import WandbLogger
 from data_loader.data_loaders import KfoldDataloader
 from model import model as module_arch
 from utils import logger, utils
@@ -22,7 +22,7 @@ def train(config):
         logger=logger,
         deterministic=True,
         precision=config.utils.precision,
-        num_sanity_val_steps=int(config.k_fold.use_k_fold is not True),
+        num_sanity_val_steps=1,
         callbacks=[
             EarlyStopping(
                 monitor=monitor_configs["monitor"],
@@ -58,7 +58,7 @@ def train_cv(config):
         logger=logger,
         deterministic=True,
         precision=config.utils.precision,
-        num_sanity_val_steps=int(config.k_fold.use_k_fold is not True),
+        num_sanity_val_steps=0,
         callbacks=[
             EarlyStopping(
                 monitor=monitor_configs["monitor"],
