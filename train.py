@@ -7,11 +7,11 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from data_loader.data_loaders import KfoldDataloader
 from model import model as module_arch
-from utils import logger, utils
+from utils import logging, utils
 
 
 def train(config):
-    logger = logger.init_logger(config)
+    logger = logging.init_logger(config)
     dataloader, model = utils.new_instance(config)
     monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
     trainer = pl.Trainer(
@@ -44,7 +44,7 @@ def train(config):
 
     wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
-    logger.log_config_yaml(config, save_path)
+    logger.save_config(config)
 
 def train_cv(config):
     logger = logger.init_logger(config)
