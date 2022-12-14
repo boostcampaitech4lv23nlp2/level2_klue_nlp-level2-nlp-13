@@ -6,13 +6,12 @@ from abc import ABC, abstractmethod
 import pandas as pd
 import pytorch_lightning as pl
 import torch
+from data.utils.utils import add_special_tokens
 from sklearn.model_selection import KFold, StratifiedShuffleSplit, train_test_split
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataset import Subset
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
-
-from data.utils.utils import add_special_tokens
 
 
 class CustomDataset(Dataset):
