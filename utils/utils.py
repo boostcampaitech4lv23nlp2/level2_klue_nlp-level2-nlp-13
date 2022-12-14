@@ -1,18 +1,17 @@
 import pickle
 import re
 
+import data_loader.data_loaders as datamodule_arch
 import matplotlib.pyplot as plt
+import model.model as module_arch
 import numpy as np
 import pytorch_lightning as pl
 import seaborn as sns
 import torch
+import wandb
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from sklearn.metrics import confusion_matrix
-
-import data_loader.data_loaders as datamodule_arch
-import model.model as module_arch
-import wandb
 
 
 def early_stop(monitor, patience, mode):
@@ -110,14 +109,14 @@ def text_preprocessing(sentence):
 
 
 def label_to_num(label):
-    with open("./data/dict_label_to_num.pkl", "rb") as f:
+    with open("./data/dict_label_to_num-data_annotation.pkl", "rb") as f:
         dict_label_to_num = pickle.load(f)
     num_label = [dict_label_to_num[v] for v in label]
     return num_label
 
 
 def num_to_label(label):
-    with open("./data/dict_num_to_label.pkl", "rb") as f:
+    with open("./data/dict_num_to_label-data_annotation.pkl", "rb") as f:
         dict_num_to_label = pickle.load(f)
     origin_label = [dict_num_to_label[v] for v in label]
     return origin_label
