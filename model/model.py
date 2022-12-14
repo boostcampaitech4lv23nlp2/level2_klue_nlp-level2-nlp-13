@@ -4,22 +4,21 @@ from copy import deepcopy
 from os import path
 from typing import Any, Dict, List, Optional, Type
 
+import model.loss as loss_module
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchmetrics
+import utils
+from data_loader.data_loaders import BaseKFoldDataModule, KfoldDataloader
 from pytorch_lightning.loops.fit_loop import FitLoop
 from pytorch_lightning.loops.loop import Loop
 from pytorch_lightning.trainer.states import TrainerFn
 from torch.optim.lr_scheduler import ExponentialLR, LambdaLR, StepLR
 from torchmetrics.classification.accuracy import Accuracy
 from transformers import AutoModelForSequenceClassification
-
-import model.loss as loss_module
-import utils
-from data_loader.data_loaders import BaseKFoldDataModule, KfoldDataloader
 
 warnings.filterwarnings("ignore")
 
@@ -33,7 +32,7 @@ class BaseModel(pl.LightningModule):
         self.lr = self.config.train.learning_rate
         self.plm = AutoModelForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path=self.model_name,
-            num_labels=30,
+            num_labels=9,
             hidden_dropout_prob=0.1,
             attention_probs_dropout_prob=0.1,
         )
@@ -81,7 +80,7 @@ class BaseModel(pl.LightningModule):
         self.log("train_loss", loss, on_step=True, prog_bar=True)
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
-        metrics = loss_module.compute_metrics(pred)
+        metrics = loss_module.compute_metrics(pred, num_label=9)
         self.log("train_f1", metrics["micro f1 score"], on_step=True, on_epoch=False, prog_bar=True)
         self.log("train_auprc", metrics["auprc"], on_step=True, on_epoch=False, prog_bar=True)
         self.log("train_acc", metrics["accuracy"], on_step=True, on_epoch=False, prog_bar=True)
@@ -95,7 +94,7 @@ class BaseModel(pl.LightningModule):
         self.log("val_loss", loss, on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
-        metrics = loss_module.compute_metrics(pred)
+        metrics = loss_module.compute_metrics(pred, num_label=9)
         self.log("val_f1", metrics["micro f1 score"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
         self.log("val_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
         self.log("val_acc", metrics["accuracy"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
@@ -118,7 +117,7 @@ class BaseModel(pl.LightningModule):
         logits = self(tokens)
 
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
-        metrics = loss_module.compute_metrics(pred)
+        metrics = loss_module.compute_metrics(pred, num_label=9)
 
         self.log(f"test_f1", metrics["micro f1 score"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
         self.log(f"test_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
@@ -152,13 +151,9 @@ class BaseModel(pl.LightningModule):
             optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
         if self.config.train.scheduler == "StepLR":
-            scheduler = torch.optim.lr_scheduler.StepLR(
-                optimizer, step_size=10, gamma=0.5
-            )
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
         elif self.config.train.scheduler == "LambdaLR":
-            scheduler = torch.optim.lr_scheduler.LambdaLR(
-                optimizer, lr_lambda=lambda epoch: 0.95**epoch
-            )
+            scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 0.95**epoch)
 
         return [optimizer], [scheduler]
 
@@ -182,7 +177,7 @@ class EnsembleVotingModel(pl.LightningModule):
         tokens, labels = batch
         logits = torch.stack([m(tokens) for m in self.models]).mean(0)
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
-        metrics = loss_module.compute_metrics(pred)
+        metrics = loss_module.compute_metrics(pred, num_labels=9)
         self.log(f"ensemble_f1", metrics["micro f1 score"])
         self.log(f"ensemble_auprc", metrics["auprc"])
         self.log(f"ensemble_acc_fold", metrics["accuracy"])
