@@ -34,6 +34,7 @@ def CELoss(output, target, conf=None):
     loss_func = nn.CrossEntropyLoss(label_smoothing=conf.train.label_smoothing)
     return loss_func(output, target)
 
+
 def FocalLoss(output, target, conf=None):
     alpha = 1
     gamma = 2
@@ -63,12 +64,12 @@ def klue_re_micro_f1(preds, labels):
 # fmt: on
 
 
-def klue_re_auprc(probs, labels):
+def klue_re_auprc(probs, labels, num_label):
     """KLUE-RE AUPRC (with no_relation)"""
-    labels = np.eye(30)[labels]
+    labels = np.eye(num_label)[labels]
 
-    score = np.zeros((30,))
-    for c in range(30):
+    score = np.zeros((num_label,))
+    for c in range(num_label):
         targets_c = labels.take([c], axis=1).ravel()
         preds_c = probs.take([c], axis=1).ravel()
         precision, recall, _ = sklearn.metrics.precision_recall_curve(targets_c, preds_c)
@@ -76,7 +77,7 @@ def klue_re_auprc(probs, labels):
     return np.average(score) * 100.0
 
 
-def compute_metrics(pred):
+def compute_metrics(pred, num_label):
     """validation을 위한 metrics function"""
     labels = pred["label_ids"]
     preds = pred["predictions"].argmax(-1)
@@ -84,7 +85,7 @@ def compute_metrics(pred):
 
     # calculate accuracy using sklearn's function
     f1 = klue_re_micro_f1(preds, labels)
-    auprc = klue_re_auprc(probs, labels)
+    auprc = klue_re_auprc(probs, labels, num_label)
     acc = accuracy_score(labels, preds)  # 리더보드 평가에는 포함되지 않습니다.
 
     return {
