@@ -59,5 +59,5 @@ python main.py -m a -c custom_config
 
 ### TODO
 - [x] auprc warning 확인
-- [ ] focal loss
-- [ ] confusion matrix
+- [x] focal loss
+- [x] confusion matrix
