@@ -7,11 +7,11 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from data_loader.data_loaders import KfoldDataloader
 from model import model as module_arch
 from utils import utils
-from utils.logging import Logging
+from utils.logging import TemplateLogger
 
 
 def train(config):
-    logger = Logging.init_logger(config)
+    logger = TemplateLogger.init_logger(config)
     dataloader, model = utils.init_modules(config)
     monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
     trainer = pl.Trainer(
@@ -19,7 +19,7 @@ def train(config):
         devices=1,
         max_epochs=config.train.max_epoch,
         log_every_n_steps=1,
-        logger=logger,
+        logger=logger.logger,
         deterministic=True,
         precision=config.utils.precision,
         num_sanity_val_steps=1,
@@ -30,7 +30,7 @@ def train(config):
                 patience=config.utils.patience,
             ),
             ModelCheckpoint(
-                save_path=save_path,
+                save_path=logger.save_dir,
                 save_top_k=config.utils.top_k,
                 monitor=monitor_configs["monitor"],
                 mode=monitor_configs["mode"],
@@ -42,7 +42,7 @@ def train(config):
     trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
     trainer.test(model=model, datamodule=dataloader) 
 
-    wandb.finish()
+    # wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
     logger.save_config(config)
 

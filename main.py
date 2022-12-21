@@ -27,6 +27,8 @@ if __name__ == "__main__":
     )
     args, _ = parser.parse_known_args()
     config = OmegaConf.load(f"./config/{args.config}.yaml")
+    if args.saved_model:
+        config.path.saved_model = args.saved_model
 
     SEED = config.utils.seed
     pl.seed_everything(SEED, workers=True) # covers torch, numpy, random
@@ -42,8 +44,7 @@ if __name__ == "__main__":
         else:
             train.train(config)
 
-    elif
-    args.mode == "exp" or args.mode == "e":
+    elif args.mode == "exp" or args.mode == "e":
         exp_count = int(input("실험할 횟수를 입력해주세요 "))
         train.sweep(config, exp_count)
 
