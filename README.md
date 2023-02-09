@@ -8,8 +8,6 @@
   - no_relation class를 제외한 micro F1 score
   - 모든 class에 대한 area under the precision-recall curve (AUPRC)
   - 2가지 metric으로 평가하며, **micro F1 score가 우선**시 된다.
-![class](https://user-images.githubusercontent.com/65378914/217735602-ab65bf5c-eee3-496b-977d-2bb8f12a210f.png)
-
 
 ## 2️⃣ 팀원 소개
 
@@ -88,3 +86,7 @@ python main.py -m a -c custom_config
 - [x] auprc warning 확인
 - [x] focal loss
 - [x] confusion matrix
+
+## 7️⃣ etc
+30개의 class 정보
+![class](https://user-images.githubusercontent.com/65378914/217735779-266b91ec-b41f-4c47-addd-8a9174531aac.png)
