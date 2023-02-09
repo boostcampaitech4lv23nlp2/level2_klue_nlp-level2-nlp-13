@@ -5,10 +5,12 @@
 - **input:** sentence, subject_entity, object_entity
 - **output:** relation 30개 중 하나를 예측한 pred_label, 그리고 30개 클래스 각각에 대해 예측한 확률 probs
 - **평가지표**
-1) no_relation class를 제외한 micro F1 score
-2) 모든 class에 대한 area under the precision-recall curve (AUPRC)
+  - no_relation class를 제외한 micro F1 score
+  - 모든 class에 대한 area under the precision-recall curve (AUPRC)
   - 2가지 metric으로 평가하며, **micro F1 score가 우선**시 된다.
-    
+![class](https://user-images.githubusercontent.com/65378914/217735602-ab65bf5c-eee3-496b-977d-2bb8f12a210f.png)
+
+
 ## 2️⃣ 팀원 소개
 
 김별희|이원재|이정아|임성근|정준녕|
@@ -25,6 +27,8 @@ object_entity: 오라클
 
 relation: 단체:별칭 (org:alternate_names)
 ```
+- train.csv: 32470개 <br>
+- test_data.csv: 총 7765개 (정답 라벨 blind = 100으로 임의 표현) <br>
 
 ## 4️⃣ 모델 설명
 <details>
