@@ -82,10 +82,10 @@ python main.py -m a -c custom_config
 - tokenizer - syllable: True 설정하면 음절 단위 토크나이저 적용 가능
 
 
-## 6️⃣ Future Works
-- [x] auprc warning 확인
-- [x] focal loss
-- [x] confusion matrix
+## 6️⃣ Development Environment
+- Language:
+- 협업툴:
+- 개발 환경:
 
 ## 7️⃣ etc
 dict_label_to_num.pkl: 문자 label과 숫자 label로 표현된 dictionary, 총 30개 classes (class는 아래와 같이 정의 되어 있며, 평가를 위해 일치 시켜주시길 바랍니다.) pickle로 load하게 되면, 딕셔너리 형태의 정보를 얻을 수 있습니다.
