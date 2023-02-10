@@ -1,7 +1,15 @@
 # KLUE-Relation Extraction
 
 ## 1️⃣ What's new
-이 repo는 huggingface API 기반의 베이스라인 코드 수정판(dev_hf)과 Pytorch Lightning API 기반 템플렛(main)을 제공합니다. 템플렛은 Lightning trainer를 바탕으로 k-fold CV, entity marker, syllable tokenizer, TAPT용 mlm(masked language modelling), WandB logger, 앙상블(logit/probability ensembling), confusion matrix 등을 지원합니다.   
+이 repo는 huggingface API 기반의 베이스라인 코드 수정판(dev_hf)과 Pytorch Lightning API 기반 템플렛(main)을 제공합니다. 템플렛은 Lightning trainer를 바탕으로 
+- k-fold CV
+- entity marker
+- syllable tokenizer
+- TAPT(Task-Adaptive Pre-Training)용 MLM(Masked Language Modeling)
+- WandB logger
+- 앙상블(logit/probability ensembling)
+- confusion matrix 
+등을 지원합니다.   
 
 ## 2️⃣ Introduction
 문장의 단어(Entity)에 대한 속성과 관계를 예측하는 Task
