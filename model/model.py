@@ -162,6 +162,10 @@ class BaseModel(pl.LightningModule):
             scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
         elif self.config.train.scheduler == "LambdaLR":
             scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 0.95**epoch)
+        elif self.config.train.scheduler == "OneCycleLR":
+            scheduler = torch.optim.lr_scheduler.OneCycleLR(
+                optimizer, max_lr=5e-5, epochs=self.config.train.max_epoch, steps_per_epoch=10, anneal_strategy="linear"
+            )
 
         return [optimizer], [scheduler]
 
