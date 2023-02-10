@@ -11,7 +11,11 @@ def inference(args, config):
     dataloader, model = utils.init_modules(config)
     model = utils.load_pretrained(model, config)
 
-    output = trainer.predict(model=model, datamodule=dataloader) # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html
+    model, _, __ = utils.load_model(args, config, dataloader, model)
+
+    output = trainer.predict(
+        model=model, datamodule=dataloader
+    )  # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html
     pred_answer, output_prob = zip(*output)
     pred_answer = np.concatenate(pred_answer).tolist()
     output_prob = np.concatenate(output_prob, axis=0).tolist()
@@ -28,6 +32,7 @@ def inference(args, config):
     if not os.path.isdir("prediction"):
         os.mkdir("prediction")
     path = args.saved_model if args.saved_model is not None else config.path.best_model_path
-    run_name = config.model.name + path.split("/")[-1]
+    time = re.findall(r"[0-9-:]+", args.saved_model.split("/")[2])[-1]
+    run_name = f'{config.model.name}-{path.split("/")[-1]}-{time}'
     run_name = run_name.replace("/", "-")
     output.to_csv(f"./prediction/submission_{run_name}.csv", index=False)

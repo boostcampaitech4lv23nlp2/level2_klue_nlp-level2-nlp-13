@@ -56,11 +56,25 @@ if __name__ == "__main__":
 
     elif args.mode == "ensemble":
         import ensemble
-        ensemble.inference(args, config)
-    
+        import re
+
+        assert config.ensemble.use_ensemble is True
+        assert any(config.ensemble.ckpt_paths) + any(config.ensemble.csv_paths) == 1
+
+        if any(config.ensemble.ckpt_paths):
+            assert config.ensemble.architecture == "EnsembleVotingModel"
+            ensemble.inference(args, config)
+
+        elif any(config.ensemble.csv_paths):
+            df = ensemble.ensemble_csvs(config.ensemble.csv_paths)
+            df["probs"] = df["probs"].apply(list).apply(str)
+            if ensemble._sanity_check(df):
+                print(len(df))
+                save_name = "_".join([re.search(r".+(?=\.csv)", path.split("/")[-1]).group() for path in config.ensemble.csv_paths])
+                df.to_csv(f"./prediction/ensemble_{save_name}.csv", index=False)
+
     elif args.mode == "all" or args.mode == "a":
-        if args.saved_model is not None:
-            print("Cannot input 'saved_model' for 'all' mode")
+        assert args.saved_model is None, "Cannot use 'saved_model' args for 'all' mode"
 
         train.train(config)
         inference.inference(args, config)
