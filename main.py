@@ -75,8 +75,7 @@ if __name__ == "__main__":
                 df.to_csv(f"./prediction/ensemble_{save_name}.csv", index=False)
 
     elif args.mode == "all" or args.mode == "a":
-        if args.saved_model is not None:
-            print("Cannot input 'saved_model' for 'all' mode")
+        assert args.saved_model is None, "Cannot use 'saved_model' args for 'all' mode"
 
         train.train(config)
         inference.inference(args, config)
