@@ -21,11 +21,23 @@ def train(config):
     )
 
     dataloader, model = utils.new_instance(config)
+    if config.path.resume_path and config.path.resume_path.endswith(".bin"):
+        tapt_model_state_dict = torch.load(config.path.resume_path)
+        try:
+            model.plm.load_state_dict(tapt_model_state_dict, strict=False)
+        except:
+            # Error can occur when model.plm has expanded vocab due to added (special) tokens
+            for key in list(tapt_model_state_dict.keys()):
+                if "embeddings" in key:
+                    del tapt_model_state_dict[key]
+            model.plm.load_state_dict(tapt_model_state_dict, strict=False)
+        config.path.resume_path = None  # not to be used as ckpt_path for trainer
+
     assert config.k_fold.use_k_fold == isinstance(
         dataloader, KfoldDataloader
     ), "Check your config again: Make sure `k_fold.use_k_fold` is compatible with `dataloader.architecture`"
 
-    wandb_logger = WandbLogger(log_model="all")
+    wandb_logger = WandbLogger()
     save_path = f"{config.path.save_path}{config.model.name}_maxEpoch{config.train.max_epoch}_batchSize{config.train.batch_size}_{wandb_logger.experiment.name}/"
     wandb_logger.experiment.config.update({"save_dir": save_path})
     trainer = pl.Trainer(
@@ -50,14 +62,6 @@ def train(config):
                 mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
                 filename="{epoch}-{step}-{val_loss}-{val_f1}",
             ),
-        ]
-        if not config.k_fold.use_k_fold
-        else [
-            utils.early_stop(
-                monitor=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["monitor"],
-                mode=utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)["mode"],
-                patience=config.utils.patience,
-            )
         ],
     )
 
