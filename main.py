@@ -37,9 +37,6 @@ if __name__ == "__main__":
 
     if args.mode == "train" or args.mode == "t":
         if config.k_fold.use_k_fold is True:
-            assert config.k_fold.use_k_fold == isinstance(dataloader, kfoldDataloader), "Check your config again: Make sure `config.k_fold.use_k_fold` is compatible with `config.datalaoder.architecture`"
-            if config.utils.on_step is False:
-                assert config.utils.patience >= config.k_fold.num_folds, "The given value for `config.utils.patience` should be higher than the number of folds"
             train.train_cv(config)
         else:
             train.train(config)
@@ -76,8 +73,10 @@ if __name__ == "__main__":
 
     elif args.mode == "all" or args.mode == "a":
         assert args.saved_model is None, "Cannot use 'saved_model' args for 'all' mode"
-
-        train.train(config)
+        if config.k_fold.use_k_fold is True:
+            train.train_cv(config)
+        else:
+            train.train(config)
         inference.inference(args, config)
 
     else:

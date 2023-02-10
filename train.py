@@ -48,18 +48,26 @@ def train(config):
 
 
 def train_cv(config):
-    logger = Logging.init_logger(config)
+    logger = TemplateLogger.init_logger(config)
+    if config.dataloader.architecture != "KfoldDataloader":
+        config.dataloader.architecture = "KfoldDataloader"
+    
     dataloader, model = utils.init_modules(config)
+    model = utils.load_pretrained(model, config)
+
+    if config.utils.on_step is False:
+        assert config.utils.patience >= config.k_fold.num_folds, "The given value for `config.utils.patience` should be higher than the number of folds"
+
     monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
         max_epochs=config.train.max_epoch,
         log_every_n_steps=1,
-        logger=logger,
+        logger=logger.logger,
         deterministic=True,
         precision=config.utils.precision,
-        num_sanity_val_steps=0,
+        num_sanity_val_steps=0, # disable sanity check 
         callbacks=[
             EarlyStopping(
                 monitor=monitor_configs["monitor"],
@@ -67,7 +75,7 @@ def train_cv(config):
                 patience=config.utils.patience,
             ),
             ModelCheckpoint(
-                save_path=save_path,
+                dirpath=logger.save_dir,
                 save_top_k=config.utils.top_k,
                 monitor=monitor_configs["monitor"],
                 mode=monitor_configs["mode"],
@@ -76,14 +84,14 @@ def train_cv(config):
         ],
     )
 
+    # add K-fold CV fit loop
     internal_fit_loop = trainer.fit_loop
-    trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=save_path)
+    trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=logger.save_dir)
     trainer.fit_loop.connect(internal_fit_loop)
 
     # k-fold fit_loop runs its own test step as part of fit step
-    trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
+    trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
 
-    wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
     logger.save_config(config)
 

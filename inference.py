@@ -31,7 +31,6 @@ def inference(args, config):
     if not os.path.isdir("prediction"):
         os.mkdir("prediction")
     path = args.saved_model if args.saved_model is not None else config.path.best_model_path
-    time = re.findall(r"[0-9-:]+", args.saved_model.split("/")[2])[-1]
-    run_name = f'{config.model.name}-{path.split("/")[-1]}-{time}'
+    run_name = f'{config.model.name}-{path.split("/")[-1]}'
     run_name = run_name.replace("/", "-")
     output.to_csv(f"./prediction/submission_{run_name}.csv", index=False)
