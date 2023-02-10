@@ -15,7 +15,7 @@ def train(config):
     dataloader, model = utils.init_modules(config)
     monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
     trainer = pl.Trainer(
-        accelerator="gpu",
+        accelerator="mps",
         devices=1,
         max_epochs=config.train.max_epoch,
         log_every_n_steps=1,
@@ -30,7 +30,7 @@ def train(config):
                 patience=config.utils.patience,
             ),
             ModelCheckpoint(
-                save_path=logger.save_dir,
+                dirpath=logger.save_dir,
                 save_top_k=config.utils.top_k,
                 monitor=monitor_configs["monitor"],
                 mode=monitor_configs["mode"],
@@ -40,7 +40,7 @@ def train(config):
     )
 
     trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
-    trainer.test(model=model, datamodule=dataloader) 
+    trainer.test(model=model, datamodule=dataloader)
 
     # wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
@@ -78,7 +78,7 @@ def train_cv(config):
     internal_fit_loop = trainer.fit_loop
     trainer.fit_loop = getattr(module_arch, "KFoldLoop")(config.k_fold.num_folds, export_path=save_path)
     trainer.fit_loop.connect(internal_fit_loop)
-    
+
     # k-fold fit_loop runs its own test step as part of fit step
     trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
 
