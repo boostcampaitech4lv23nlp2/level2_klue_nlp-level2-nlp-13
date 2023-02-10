@@ -9,7 +9,7 @@ from utils import utils
 def inference(args, config):
     trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1, deterministic=True)
     dataloader, model = utils.init_modules(config)
-    model = utils.load_pretrained(model, config) 
+    model = utils.load_pretrained(model, config)
 
     output = trainer.predict(model=model, datamodule=dataloader) # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html
     pred_answer, output_prob = zip(*output)
