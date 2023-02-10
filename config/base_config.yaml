@@ -50,7 +50,8 @@ k_fold:
 ensemble:
   use_ensemble: False
   architecture: EnsembleVotingModel
-  ckpt_paths: []
+  ckpt_paths: [] # use logits of ckpt models 
+  csv_paths: [] # aggregate csv files
 
 wandb:
   team_account_name: next-level-potato # 팀 계정

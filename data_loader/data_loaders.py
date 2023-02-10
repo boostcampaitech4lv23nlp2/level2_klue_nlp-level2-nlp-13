@@ -71,6 +71,7 @@ class BaseDataloader(pl.LightningDataModule):
         self.max_length = config.tokenizer.max_length
         self.new_tokens = list(config.tokenizer.new_tokens)
         self.use_syllable_tokenize = config.tokenizer.syllable
+        self.use_entity_marker = (config.data_preprocess.marker_type is not None) & ("entity" in config.path.train_path)
 
         self.new_token_count = 0
         if self.new_tokens != []:
@@ -99,6 +100,17 @@ class BaseDataloader(pl.LightningDataModule):
         if self.use_syllable_tokenize:
             entities = [[e01, e02] for e01, e02 in zip(subject_entities, object_entities)]
             tokens = self.syllable_tokenizer(entities, sentences, self.max_length)
+
+        elif self.use_entity_marker:
+            tokens = self.tokenizer(
+                sentences,
+                add_special_tokens=True,
+                padding="longest",
+                truncation=True,
+                return_tensors="pt",
+                max_length=self.max_length,
+            )
+
         else:
             concat_entity = [e01 + sep_token + e02 for e01, e02 in zip(subject_entities, object_entities)]
             tokens = self.tokenizer(
