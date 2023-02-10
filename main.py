@@ -27,23 +27,19 @@ if __name__ == "__main__":
     )
     args, _ = parser.parse_known_args()
     config = OmegaConf.load(f"./config/{args.config}.yaml")
+    if args.saved_model:
+        config.path.saved_model = args.saved_model
 
     SEED = config.utils.seed
-    pl.seed_everything(SEED, workers=True)  # covers torch, numpy, random
-    # random.seed(SEED)
-    # np.random.seed(SEED)
-    # torch.manual_seed(SEED)
-    # torch.cuda.manual_seed(SEED)
-    # torch.cuda.manual_seed_all(SEED)
+    pl.seed_everything(SEED, workers=True) # covers torch, numpy, random
     torch.backends.cudnn.benchmark = False
     torch.use_deterministic_algorithms(True)
 
     if args.mode == "train" or args.mode == "t":
-        train.train(config)
-        # if config.k_fold.use_k_fold:
-        #     train.k_train(config)
-        # else:
-        #     train.train(config)
+        if config.k_fold.use_k_fold is True:
+            train.train_cv(config)
+        else:
+            train.train(config)
 
     elif args.mode == "exp" or args.mode == "e":
         exp_count = int(input("실험할 횟수를 입력해주세요 "))
@@ -53,6 +49,7 @@ if __name__ == "__main__":
         if args.saved_model is None:
             print("경로를 입력해주세요")
         else:
+            config.path.resume_path = args.saved_model
             inference.inference(args, config)
 
     elif args.mode == "ensemble":
@@ -76,8 +73,10 @@ if __name__ == "__main__":
 
     elif args.mode == "all" or args.mode == "a":
         assert args.saved_model is None, "Cannot use 'saved_model' args for 'all' mode"
-
-        train.train(config)
+        if config.k_fold.use_k_fold is True:
+            train.train_cv(config)
+        else:
+            train.train(config)
         inference.inference(args, config)
 
     else:

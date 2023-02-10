@@ -29,6 +29,22 @@ class CustomDataset(Dataset):
         return len(self.df)
 
 
+class MultipleHeadDataset(Dataset):
+    def __init__(self, df):
+        self.df = df
+
+    def __getitem__(self, idx):
+        sentence = self.df["sentence"].iloc[idx]
+        subject_entity = self.df["subject_entity"].iloc[idx]
+        object_entity = self.df["object_entity"].iloc[idx]
+        label = self.df["label"].iloc[idx]
+        is_relation_label = self.df["is_relation_label"].iloc[idx]
+        return sentence, subject_entity, object_entity, label, is_relation_label
+
+    def __len__(self):
+        return len(self.df)
+
+
 class BaseDataloader(pl.LightningDataModule):
     def __init__(self, config):
         super().__init__()
@@ -216,7 +232,6 @@ class BaseDataloader(pl.LightningDataModule):
             # new dataframe
             train_df = self.preprocess(train_data)
             val_df = self.preprocess(val_data)
-
             self.train_dataset = CustomDataset(train_df)
             self.val_dataset = CustomDataset(val_df)
         else:
@@ -265,6 +280,71 @@ class BaseDataloader(pl.LightningDataModule):
     @property
     def new_vocab_size(self):
         return self.new_token_count + self.tokenizer.vocab_size
+
+
+class MultipleHeadDataloader(BaseDataloader):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def batchify(self, batch):
+        """is_relation_label is newly added"""
+        sentences, subject_entities, object_entities, labels, is_relation_labels = zip(*batch)
+
+        outs = self.tokenize(sentences, subject_entities, object_entities)
+        labels = torch.tensor(labels)
+        is_relation_labels = torch.tensor(is_relation_labels)
+
+        return outs, labels, is_relation_labels
+
+    def preprocess(self, df):
+        from utils.utils import label_to_num
+
+        """
+        기존 subject_entity, object entity string에서 word만 추출
+            e.g. "{'word': '비틀즈', 'start_idx': 24, 'end_idx': 26, 'type': 'ORG'}" => 비틀즈
+        train/dev set의 경우 label을 str ->  int
+        """
+        extract_entity = lambda row: eval(row)["word"].replace("'", "")
+
+        df["subject_entity"] = df["subject_entity"].apply(extract_entity)
+        df["object_entity"] = df["object_entity"].apply(extract_entity)
+
+        is_relation = lambda label: 1 if label != "no_relation" else 0
+        df["is_relation_label"] = df["label"].apply(is_relation)
+
+        if isinstance(df["label"].iloc[0], str):
+            num_labels = label_to_num(df["label"].values)
+            df["label"] = num_labels
+
+        return df
+
+    def setup(self, stage="fit"):
+        if stage == "fit":
+            total_data = pd.read_csv(self.train_path)
+
+            if self.train_ratio == 1.0:
+                val_ratio = 0.2
+                train_data, val_data = train_test_split(total_data, test_size=val_ratio)
+                train_data = total_data
+            else:
+                train_data, val_data = train_test_split(total_data, train_size=self.train_ratio)
+
+            # new dataframe
+            train_df = self.preprocess(train_data)
+            val_df = self.preprocess(val_data)
+
+            self.train_dataset = MultipleHeadDataset(train_df)
+            self.val_dataset = MultipleHeadDataset(val_df)
+
+        else:
+            test_data = pd.read_csv(self.test_path)
+            predict_data = pd.read_csv(self.predict_path)
+
+            test_df = self.preprocess(test_data)
+            predict_df = self.preprocess(predict_data)
+
+            self.test_dataset = MultipleHeadDataset(test_df)
+            self.predict_dataset = MultipleHeadDataset(predict_df)
 
 
 class BaseKFoldDataModule(pl.LightningDataModule, ABC):
