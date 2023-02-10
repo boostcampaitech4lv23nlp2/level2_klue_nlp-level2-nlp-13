@@ -38,7 +38,7 @@ def train(config):
             ),
         ],
     )
-    trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
+    trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.resume_path)
     trainer.test(model=model, datamodule=dataloader)
 
     # wandb.finish()
