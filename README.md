@@ -1,6 +1,9 @@
 # KLUE-Relation Extraction
 
-## 1️⃣ Introduction
+## 1️⃣ What's new
+이 repo는 huggingface API 기반의 베이스라인 코드 수정판(dev_hf)과 Pytorch Lightning API 기반 템플렛(main)을 제공합니다. 템플렛은 Lightning trainer를 바탕으로 k-fold CV, entity marker, syllable tokenizer, TAPT용 mlm(masked language modelling), WandB logger, 앙상블(logit/probability ensembling), confusion matrix 등을 지원합니다.   
+
+## 2️⃣ Introduction
 문장의 단어(Entity)에 대한 속성과 관계를 예측하는 Task
 - **input:** sentence, subject_entity, object_entity
 - **output:** relation 30개 중 하나를 예측한 pred_label, 그리고 30개 클래스 각각에 대해 예측한 확률 probs
@@ -9,14 +12,14 @@
   - 모든 class에 대한 area under the precision-recall curve (AUPRC)
   - 2가지 metric으로 평가하며, **micro F1 score가 우선**시 된다.
 
-## 2️⃣ 팀원 소개
+## 3️⃣ 팀원 소개
 
 김별희|이원재|이정아|임성근|정준녕|
 :-:|:-:|:-:|:-:|:-:
 <img src='https://avatars.githubusercontent.com/u/42535803?v=4' height=80 width=80px></img>|<img src='https://avatars.githubusercontent.com/u/61496071?v=4' height=80 width=80px></img>|<img src='https://avatars.githubusercontent.com/u/65378914?v=4' height=80 width=80px></img>|<img src='https://avatars.githubusercontent.com/u/14817039?v=4' height=80 width=80px></img>|<img src='https://avatars.githubusercontent.com/u/51015187?v=4' height=80 width=80px></img>
 [Github](https://github.com/kimbyeolhee)|[Github](https://github.com/wjlee-ling)|[Github](https://github.com/jjeongah)|[Github](https://github.com/lim4349)|[Github](https://github.com/ezez-refer)
 
-## 3️⃣ 데이터
+## 4️⃣ 데이터
 ```
 Example)
 sentence: 오라클(구 썬 마이크로시스템즈)에서 제공하는 자바 가상 머신 말고도 각 운영 체제 개발사가 제공하는 자바 가상 머신 및 오픈소스로 개발된 구형 버전의 온전한 자바 VM도 있으며, GNU의 GCJ나 아파치 소프트웨어 재단(ASF: Apache Software Foundation)의 하모니(Harmony)와 같은 아직은 완전하지 않지만 지속적인 오픈 소스 자바 가상 머신도 존재한다.
@@ -28,7 +31,7 @@ relation: 단체:별칭 (org:alternate_names)
 - train.csv: 32470개 <br>
 - test_data.csv: 총 7765개 (정답 라벨 blind = 100으로 임의 표현) <br>
 
-## 4️⃣ 모델 설명
+## 5️⃣ 모델 설명
 <details>
     <summary><b><font size="10">Project Tree</font></b></summary>
 <div markdown="1">
@@ -39,7 +42,7 @@ relation: 단체:별칭 (org:alternate_names)
 </div>
 </details>
 
-## 5️⃣ How to Run
+## 6️⃣ How to Run
 ### 가상환경
 ```bash
 # 가상환경 생성
@@ -78,14 +81,15 @@ python main.py -m i -s "saved_models/klue/bert-base.ckpt" -c custom_config
 python main.py --mode all --config custom_config 
 python main.py -m a -c custom_config
 ```
+
+### 앙상블
+```bash
+# config.yaml 내 ensemble 항목에서 ckpt_paths (-> logit ensembling) 나 csv_paths (-> probability ensembling) 를 채운 후 다음 실행
+python main.py --mode ensemble 
+```
+
 ### base_config.yaml
 - tokenizer - syllable: True 설정하면 음절 단위 토크나이저 적용 가능
-
-
-## 6️⃣ Development Environment
-- Language:
-- 협업툴:
-- 개발 환경:
 
 ## 7️⃣ etc
 dict_label_to_num.pkl: 문자 label과 숫자 label로 표현된 dictionary, 총 30개 classes (class는 아래와 같이 정의 되어 있며, 평가를 위해 일치 시켜주시길 바랍니다.) pickle로 load하게 되면, 딕셔너리 형태의 정보를 얻을 수 있습니다.
