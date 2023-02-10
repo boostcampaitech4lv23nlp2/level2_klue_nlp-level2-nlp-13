@@ -97,6 +97,7 @@ def train_cv(config):
 
 
 def sweep(config, exp_count):
+    import wandb
     project_name = config.wandb.project
 
     sweep_config = {
