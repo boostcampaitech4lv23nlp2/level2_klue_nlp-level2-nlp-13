@@ -13,6 +13,7 @@ from utils.logging import TemplateLogger
 def train(config):
     logger = TemplateLogger.init_logger(config)
     dataloader, model = utils.init_modules(config)
+    model = utils.load_pretrained(model, config) # load task-adaptively pretrained LM if exists
     monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
     trainer = pl.Trainer(
         accelerator="gpu",

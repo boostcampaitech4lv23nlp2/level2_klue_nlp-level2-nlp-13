@@ -32,12 +32,13 @@ def load_pretrained(model, config):
        # if "all" mode
        model = model.load_from_checkpoint(path)
     else:
-        # if "inference" mode
-        path = config.path.ckpt_path
-        pretrained_model = torch.load(path)
-        if isinstance(pretrained_model, torch.nn.Module):
-            model.plm = model.load_state_dict(path, strict=False)
-            print(f"Replaced weights of {model.plm.__class__.__name__}")
+        # if TAPT-PLM exists or if "infer" mode
+        path = config.path.resume_path
+        if path:
+            pretrained_model = torch.load(path)
+            if isinstance(pretrained_model, torch.nn.Module):
+                model.plm = model.load_state_dict(path, strict=False)
+                print(f"Replaced weights of {model.plm.__class__.__name__}")
 
     return model
 

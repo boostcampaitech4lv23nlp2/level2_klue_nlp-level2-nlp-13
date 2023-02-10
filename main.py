@@ -52,6 +52,7 @@ if __name__ == "__main__":
         if args.saved_model is None:
             print("경로를 입력해주세요")
         else:
+            config.path.resume_path = args.saved_model
             inference.inference(args, config)
 
     elif args.mode == "ensemble":

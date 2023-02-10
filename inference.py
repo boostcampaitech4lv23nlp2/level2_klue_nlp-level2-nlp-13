@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
@@ -10,8 +11,6 @@ def inference(args, config):
     trainer = pl.Trainer(gpus=1, max_epochs=config.train.max_epoch, log_every_n_steps=1, deterministic=True)
     dataloader, model = utils.init_modules(config)
     model = utils.load_pretrained(model, config)
-
-    model, _, __ = utils.load_model(args, config, dataloader, model)
 
     output = trainer.predict(
         model=model, datamodule=dataloader
