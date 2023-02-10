@@ -15,7 +15,8 @@ from pytorch_lightning.loops.loop import Loop
 from pytorch_lightning.trainer.states import TrainerFn
 from torch.optim.lr_scheduler import ExponentialLR, LambdaLR, StepLR
 from torchmetrics.classification.accuracy import Accuracy
-from transformers import AutoModelForSequenceClassification
+from transformers import AutoModelForSequenceClassification, AutoConfig, RobertaModel
+from transformers.models.roberta.modeling_roberta import RobertaPreTrainedModel
 
 import model.loss as loss_module
 import utils
@@ -42,7 +43,7 @@ class BaseModel(pl.LightningModule):
             self.freeze()
         self.plm.resize_token_embeddings(new_vocab_size)
 
-        print(self.plm.__dict__)
+        # print(self.plm.__dict__)
         self.loss_func = loss_module.loss_config[self.config.train.loss]
         self.val_cm = config.train.print_val_cm
         self.test_cm = config.train.print_test_cm
@@ -100,18 +101,21 @@ class BaseModel(pl.LightningModule):
         self.log("val_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
         self.log("val_acc", metrics["accuracy"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
 
-        if len(self.valid_preds) == 0 and len(self.valid_labels) == 0:
-            self.valid_preds = pred["predictions"]
-            self.valid_labels = pred["label_ids"]
-        else:
-            self.valid_preds = np.concatenate((self.valid_preds, pred["predictions"]), axis=0)
-            self.valid_labels = np.concatenate((self.valid_labels, pred["label_ids"]), axis=0)
+        if self.val_cm:
+            if len(self.valid_preds) == 0 and len(self.valid_labels) == 0:
+                self.valid_preds = pred["predictions"]
+                self.valid_labels = pred["label_ids"]
+            else:
+                self.valid_preds = np.concatenate((self.valid_preds, pred["predictions"]), axis=0)
+                self.valid_labels = np.concatenate((self.valid_labels, pred["label_ids"]), axis=0)
 
         return loss
 
     def validation_epoch_end(self, outputs):
         if self.val_cm:
             utils.utils.get_confusion_matrix(self.valid_preds, self.valid_labels, "validation")
+            self.valid_preds = []
+            self.valid_labels = []
 
     def test_step(self, batch, batch_idx):
         tokens, labels = batch
@@ -124,16 +128,19 @@ class BaseModel(pl.LightningModule):
         self.log(f"test_auprc", metrics["auprc"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
         self.log(f"test_acc", metrics["accuracy"], on_step=self.config.utils.on_step, on_epoch=True, prog_bar=True)
 
-        if len(self.test_preds) == 0 and len(self.test_labels) == 0:
-            self.test_preds = pred["predictions"]
-            self.test_labels = pred["label_ids"]
-        else:
-            self.test_preds = np.concatenate((self.test_preds, pred["predictions"]), axis=0)
-            self.test_labels = np.concatenate((self.test_labels, pred["label_ids"]), axis=0)
+        if self.test_cm:
+            if len(self.test_preds) == 0 and len(self.test_labels) == 0:
+                self.test_preds = pred["predictions"]
+                self.test_labels = pred["label_ids"]
+            else:
+                self.test_preds = np.concatenate((self.test_preds, pred["predictions"]), axis=0)
+                self.test_labels = np.concatenate((self.test_labels, pred["label_ids"]), axis=0)
 
     def test_epoch_end(self, outputs):
         if self.test_cm:
             utils.utils.get_confusion_matrix(self.test_preds, self.test_labels, "test")
+            self.test_preds = []
+            self.test_labels = []
 
     def predict_step(self, batch, batch_idx):
         tokens, _ = batch
@@ -152,20 +159,15 @@ class BaseModel(pl.LightningModule):
             optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
         if self.config.train.scheduler == "StepLR":
-            scheduler = torch.optim.lr_scheduler.StepLR(
-                optimizer, step_size=10, gamma=0.5
-            )
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
         elif self.config.train.scheduler == "LambdaLR":
-            scheduler = torch.optim.lr_scheduler.LambdaLR(
-                optimizer, lr_lambda=lambda epoch: 0.95**epoch
+            scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 0.95**epoch)
+        elif self.config.train.scheduler == "OneCycleLR":
+            scheduler = torch.optim.lr_scheduler.OneCycleLR(
+                optimizer, max_lr=5e-5, epochs=self.config.train.max_epoch, steps_per_epoch=10, anneal_strategy="linear"
             )
 
         return [optimizer], [scheduler]
-
-
-class CustomModel(BaseModel):
-    def __init__(self, config, new_vocab_size):
-        super().__init__(config, new_vocab_size)
 
 
 class EnsembleVotingModel(pl.LightningModule):
@@ -183,9 +185,9 @@ class EnsembleVotingModel(pl.LightningModule):
         logits = torch.stack([m(tokens) for m in self.models]).mean(0)
         pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
         metrics = loss_module.compute_metrics(pred)
-        self.log(f"ensemble_f1", metrics["micro f1 score"])
-        self.log(f"ensemble_auprc", metrics["auprc"])
-        self.log(f"ensemble_acc_fold", metrics["accuracy"])
+        self.log(f"ensemble_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
+        self.log(f"ensemble_auprc", metrics["auprc"], on_step=True, prog_bar=True)
+        self.log(f"ensemble_acc_fold", metrics["accuracy"], on_step=True, prog_bar=True)
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         tokens, _ = batch
@@ -287,3 +289,178 @@ class KFoldLoop(Loop):
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
         self.__dict__.update(state)
+
+
+class RobertaClassificationHead(nn.Module):
+    """Head for sentence-level classification tasks."""
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        classifier_dropout = (
+            config.classifier_dropout
+            if config.classifier_dropout is not None
+            else config.hidden_dropout_prob
+        )
+        self.dropout = nn.Dropout(classifier_dropout)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
+
+    def forward(self, features, **kwargs):
+        x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
+        x = self.dropout(x)
+        x = self.dense(x)
+        x = torch.tanh(x)
+        x = self.dropout(x)
+        x = self.out_proj(x)
+        return x
+
+
+class AuxiliaryClassificationRobertaForSequenceClassification(RobertaPreTrainedModel):
+    _keys_to_ignore_on_load_missing = [r"position_ids"]
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.config = config
+
+        self.roberta = RobertaModel(config, add_pooling_layer=False)
+        c1 = AutoConfig.from_pretrained('klue/roberta-large', num_labels=2)
+        c2 = AutoConfig.from_pretrained('klue/roberta-large', num_labels=30)
+        self.is_relation_classifier = RobertaClassificationHead(c1)  
+        self.classifier = RobertaClassificationHead(c2)  
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def forward(
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
+    ):
+
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
+
+        outputs = self.roberta(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        sequence_output = outputs[0]
+
+        is_relation_logits = self.is_relation_classifier(sequence_output)  
+        logits = self.classifier(sequence_output)  
+
+        loss = 0 if labels is not None else None
+        is_relation_output = (is_relation_logits,) + outputs[2:]  
+        output = (logits,) + outputs[2:]  
+
+        return is_relation_output, output
+
+
+class AuxiliaryClassificationRobertaModel(BaseModel):
+    def __init__(self, config, new_vocab_size):
+        super().__init__(config, new_vocab_size)
+        self.plm = AuxiliaryClassificationRobertaForSequenceClassification.from_pretrained(
+            pretrained_model_name_or_path="klue/roberta-large"
+        )
+        self.alpha = 0.2 # is_relation
+        self.beta = 0.8
+    
+    def forward(self, x): 
+        input_ids, attention_mask = x
+        outputs= self.plm(input_ids=input_ids, attention_mask=attention_mask)
+        is_relation_output, output = outputs[0][0], outputs[1][0]
+        return is_relation_output, output
+
+
+    def training_step(self, batch, batch_idx):
+        tokens, labels, is_relation_labels = batch
+        input_ids= tokens['input_ids'] 
+        attention_mask =  tokens['attention_mask']
+        
+        is_relation_logits, logits = self((input_ids, attention_mask))
+
+        is_relation_loss = self.loss_func(is_relation_logits, is_relation_labels.long(), self.config)
+        loss = self.loss_func(logits, labels.long(), self.config)
+        final_loss = self.alpha * is_relation_loss + self.beta * loss
+        self.log("train_is_relation_loss", is_relation_loss, on_step=True, prog_bar=True)
+        self.log("train_loss", loss, on_step=True, prog_bar=True)
+        self.log("train_final_loss", final_loss, on_step=True, prog_bar=True)
+
+        pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
+        metrics = loss_module.compute_metrics(pred)
+        self.log("train_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
+        self.log("train_auprc", metrics["auprc"], on_step=True, prog_bar=True)
+        self.log("train_acc", metrics["accuracy"], on_step=True, prog_bar=True)
+
+        return final_loss   
+
+    def validation_step(self, batch, batch_idx): 
+        tokens, labels, is_relation_labels  = batch
+        input_ids= tokens['input_ids']
+        attention_mask =  tokens['attention_mask']
+
+        is_relation_logits, logits = self((input_ids, attention_mask))
+
+        loss = self.loss_func(logits, labels.long(), self.config)
+
+        pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
+        metrics = loss_module.compute_metrics(pred)
+        self.log("val_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
+        self.log("val_auprc", metrics["auprc"], on_step=True, prog_bar=True)
+        self.log("val_acc", metrics["accuracy"], on_step=True, prog_bar=True)
+
+        if len(self.valid_preds) == 0 and len(self.valid_labels) == 0:
+            self.valid_preds = pred["predictions"]
+            self.valid_labels = pred["label_ids"]
+        else:
+            self.valid_preds = np.concatenate((self.valid_preds, pred["predictions"]), axis=0)
+            self.valid_labels = np.concatenate((self.valid_labels, pred["label_ids"]), axis=0)
+
+        return loss   
+
+    def test_step(self, batch, batch_idx):
+        tokens, labels, is_relation_labels  = batch
+        input_ids= tokens['input_ids']
+        attention_mask =  tokens['attention_mask']
+        is_relation_logits, logits = self((input_ids, attention_mask))
+
+        pred = {"label_ids": labels.detach().cpu().numpy(), "predictions": logits.detach().cpu().numpy()}
+        metrics = loss_module.compute_metrics(pred)
+        self.log("test_f1", metrics["micro f1 score"], on_step=True, prog_bar=True)
+        self.log("test_auprc", metrics["auprc"], on_step=True, prog_bar=True)
+        self.log("test_acc", metrics["accuracy"], on_step=True, prog_bar=True)
+
+        if len(self.test_preds) == 0 and len(self.test_labels) == 0:
+            self.test_preds = pred["predictions"]
+            self.test_labels = pred["label_ids"]
+        else:
+            self.test_preds = np.concatenate((self.test_preds, pred["predictions"]), axis=0)
+            self.test_labels = np.concatenate((self.test_labels, pred["label_ids"]), axis=0)
+
+    def predict_step(self, batch, batch_idx):
+        tokens, _ , _ = batch
+        input_ids= tokens['input_ids']
+        attention_mask =  tokens['attention_mask']
+        is_relation_logits, logits = self((input_ids, attention_mask))
+
+        self.output_pred = np.argmax(logits.detach().cpu().numpy(), axis=-1)
+        self.output_prob = nn.functional.softmax(logits, dim=-1).detach().cpu().numpy()
+
+        return (self.output_pred, self.output_prob)
