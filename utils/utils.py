@@ -6,6 +6,7 @@ import numpy as np
 import pytorch_lightning as pl
 import seaborn as sns
 import torch
+import wandb
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from sklearn.metrics import confusion_matrix
@@ -13,89 +14,33 @@ from sklearn.metrics import confusion_matrix
 import data_loader.data_loaders as datamodule_arch
 import model.model as module_arch
 import wandb
+import pathlib
+import re
 
-
-def early_stop(monitor, patience, mode):
-    early_stop_callback = EarlyStopping(monitor=monitor, min_delta=0.00, patience=patience, verbose=False, mode=mode)
-    return early_stop_callback
-
-
-def best_save(save_path, top_k, monitor, mode, filename):
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=save_path,
-        save_top_k=top_k,
-        monitor=monitor,
-        mode=mode,
-        filename=filename,
-    )
-    return checkpoint_callback
-
-
-def new_instance(config):
+def init_modules(config):
     dataloader = getattr(datamodule_arch, config.dataloader.architecture)(config)
     model = getattr(module_arch, config.model.architecture)(config, dataloader.new_vocab_size)
 
     return dataloader, model
 
 
-def load_model(args, config, dataloader, model):
+def load_pretrained(model, config):
     """
-    불러온 모델이 저장되어 있는 디렉터리를 parsing함
-    ex) 'save_models/klue/roberta-small_maxEpoch1_batchSize32_blooming-wind-57'
+    Load weights of a pretrained language model.
     """
-    save_path = "/".join(args.saved_model.split("/")[:-1])
-
-    """
-    huggingface에 저장된 모델명을 parsing함
-    ex) 'klue/roberta-small'
-    """
-    model_name = "/".join(args.saved_model.split("/")[1:-1]).split("_")[0]
-
-    if args.saved_model.split(".")[-1] == "ckpt":
-        model = model.load_from_checkpoint(args.saved_model)
-    elif args.saved_model.split(".")[-1] == "pt" and args.mode != "continue train" and args.mode != "ct":
-        model = torch.load(args.saved_model)
+    if path:= config.get("path.best_model_path", None):
+       # if "all" mode
+       model = model.load_from_checkpoint(path)
     else:
-        exit("saved_model 파일 오류")
+        # if TAPT-PLM exists or if "infer" mode
+        path = config.path.resume_path
+        if path:
+            pretrained_model = torch.load(path)
+            if isinstance(pretrained_model, torch.nn.Module):
+                model.plm = model.load_state_dict(path, strict=False)
+                print(f"Replaced weights of {model.plm.__class__.__name__}")
 
-    config.path.save_path = save_path + "/"
-    config.model.model_name = "/".join(model_name.split("/")[1:])
-    return model, args, config
-
-
-def new_instance(config):
-
-    dataloader = getattr(datamodule_arch, config.dataloader.architecture)(config)
-
-    model = getattr(module_arch, config.model.architecture)(config, dataloader.new_vocab_size)
-
-    return dataloader, model
-
-
-def load_model(args, config, dataloader, model):
-    """
-    불러온 모델이 저장되어 있는 디렉터리를 parsing함
-    ex) 'save_models/klue/roberta-small_maxEpoch1_batchSize32_blooming-wind-57'
-    """
-    save_path = "/".join(args.saved_model.split("/")[:-1])
-
-    """
-    huggingface에 저장된 모델명을 parsing함
-    ex) 'klue/roberta-small'
-    """
-    model_name = "/".join(args.saved_model.split("/")[1:-1]).split("_")[0]
-
-    if args.saved_model.split(".")[-1] == "ckpt":
-        model = model.load_from_checkpoint(args.saved_model)
-    elif args.saved_model.split(".")[-1] == "pt" and args.mode != "continue train" and args.mode != "ct":
-        model = torch.load(args.saved_model)
-    else:
-        exit("saved_model 파일 오류")
-
-    config.path.save_path = save_path + "/"
-    config.model.model_name = "/".join(model_name.split("/")[1:])
-    return model, args, config
-
+    return model
 
 def text_preprocessing(sentence):
     # s = re.sub(r"!!+", "!!!", sentence)  # !한개 이상 -> !!! 고정
@@ -137,9 +82,8 @@ def get_confusion_matrix(pred, label_ids, mode=None):
     wandb.log({f"{mode} confusion_matrix": wandb.Image(fig)})
 
 
-# 모니터링 할 쌍들
 def monitor_config(key, on_step):
-    """Returns appropriate metric monitor setting."""
+    """Returns proper metric monitor-mode pair."""
     mapping = {
         "val_loss": {"monitor": "val_loss", "mode": "min"},
         "val_pearson": {"monitor": "val_pearson", "mode": "max"},
@@ -157,86 +101,3 @@ def monitor_config(key, on_step):
     return new_mapping[key]
 
 
-# def get_checkpoint_callback(criterion, save_frequency, prefix="checkpoint", use_modelcheckpoint_filename=False):
-
-#     checkpoint_callback = None
-#     if criterion == "step":
-#         checkpoint_callback = CheckpointEveryNSteps(save_frequency, prefix, use_modelcheckpoint_filename)
-#     elif criterion == "epoch":
-#         checkpoint_callback = CheckpointEveryNEpochs(save_frequency, prefix, use_modelcheckpoint_filename)
-
-#     return checkpoint_callback
-
-
-# class CheckpointEveryNSteps(pl.Callback):
-#     """
-#     Save a checkpoint every N steps, instead of Lightning's default that checkpoints
-#     based on validation loss.
-#     """
-
-#     def __init__(
-#         self,
-#         save_step_frequency,
-#         prefix="checkpoint",
-#         use_modelcheckpoint_filename=False,
-#     ):
-#         """
-#         Args:
-#             save_step_frequency: how often to save in steps
-#             prefix: add a prefix to the name, only used if
-#                 use_modelcheckpoint_filename=False
-#             use_modelcheckpoint_filename: just use the ModelCheckpoint callback's
-#                 default filename, don't use ours.
-#         """
-#         self.save_step_frequency = save_step_frequency
-#         self.prefix = prefix
-#         self.use_modelcheckpoint_filename = use_modelcheckpoint_filename
-
-#     def on_batch_end(self, trainer: pl.Trainer, _):
-#         """Check if we should save a checkpoint after every train batch"""
-#         epoch = trainer.current_epoch
-#         global_step = trainer.global_step
-#         if global_step % self.save_step_frequency == 0:
-#             if self.use_modelcheckpoint_filename:
-#                 filename = trainer.checkpoint_callback.filename
-#             else:
-#                 filename = f"{self.prefix}_epoch={epoch}_global_step={global_step}.ckpt"
-#             ckpt_path = os.path.join("model_save/", filename)
-#             trainer.save_checkpoint(ckpt_path)
-
-
-# class CheckpointEveryNEpochs(pl.Callback):
-#     """
-#     Save a checkpoint every N steps, instead of Lightning's default that checkpoints
-#     based on validation loss.
-#     """
-
-#     def __init__(
-#         self,
-#         save_epoch_frequency,
-#         prefix="checkpoint",
-#         use_modelcheckpoint_filename=False,
-#     ):
-#         """
-#         Args:
-#             save_epoch_frequency: how often to save in epochs
-#             prefix: add a prefix to the name, only used if
-#                 use_modelcheckpoint_filename=False
-#             use_modelcheckpoint_filename: just use the ModelCheckpoint callback's
-#                 default filename, don't use ours.
-#         """
-#         self.save_epoch_frequency = save_epoch_frequency
-#         self.prefix = prefix
-#         self.use_modelcheckpoint_filename = use_modelcheckpoint_filename
-
-#     def on_epoch_end(self, trainer: pl.Trainer, _):
-#         """Check if we should save a checkpoint after every train epoch"""
-#         epoch = trainer.current_epoch
-#         global_step = trainer.global_step
-#         if epoch % self.save_epoch_frequency == 0:
-#             if self.use_modelcheckpoint_filename:
-#                 filename = trainer.checkpoint_callback.filename
-#             else:
-#                 filename = f"{self.prefix}_epoch={epoch}_global_step={global_step}.ckpt"
-#             ckpt_path = os.path.join("model_save/", filename)
-#             trainer.save_checkpoint(ckpt_path)

@@ -6,12 +6,12 @@ path:
   resume_path: # checkpoint path for resuming training
 
 data_preprocess:
-  marker_type: typed_entity_marker # entity_marker, entity_marker_punc, typed_entity_marker, typed_entity_makrer_punc_1~3
+  marker_type: # typed_entity_marker, entity_marker, entity_marker_punc, typed_entity_marker, typed_entity_makrer_punc_1~3
 
 dataloader:
   shuffle: True
   train_ratio: 0.8
-  architecture: BaseDataloader
+  architecture: BaseDataloader # KfoldDataloader
 
 model:
   name: klue/bert-base
@@ -41,7 +41,7 @@ utils:
   patience: 25
   top_k: 3
   precision: 32 # 16(fp-16) is also possible
-  on_step: True # whether to log val/test metrics step-wise. Train metrics will automatcially be logged step-wise. 
+  on_step: False  # whether to log val/test metrics step-wise. Train metrics will automatcially be logged step-wise. 
 
 k_fold:
   use_k_fold: False
@@ -50,10 +50,11 @@ k_fold:
 ensemble:
   use_ensemble: False
   architecture: EnsembleVotingModel
-  ckpt_paths: []
+  ckpt_paths: [] # use logits of ckpt models 
+  csv_paths: [] # aggregate csv files
 
 wandb:
-  team_account_name: next-level-potato # 팀 계정
+  team_account_name:  # 팀 계정
   project_repo: RE  # 프로젝트 레포 이름
-  name: kbh # 실험자 명
-  info: baseline_bert-base # 실험명
+  name: # 실험자 명
+  info: # 실험명
