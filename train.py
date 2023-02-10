@@ -15,7 +15,7 @@ def train(config):
     dataloader, model = utils.init_modules(config)
     monitor_configs = utils.monitor_config(key=config.utils.monitor, on_step=config.utils.on_step)
     trainer = pl.Trainer(
-        accelerator="mps",
+        accelerator="gpu",
         devices=1,
         max_epochs=config.train.max_epoch,
         log_every_n_steps=1,
@@ -36,15 +36,15 @@ def train(config):
                 mode=monitor_configs["mode"],
                 filename="{epoch}-{step}-{val_loss}-{val_f1}",
             ),
-            ]
+        ],
     )
-
     trainer.fit(model=model, datamodule=dataloader, ckpt_path=config.path.ckpt_path)
     trainer.test(model=model, datamodule=dataloader)
 
     # wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
     logger.save_config(config)
+
 
 def train_cv(config):
     logger = Logging.init_logger(config)
@@ -72,7 +72,7 @@ def train_cv(config):
                 mode=monitor_configs["mode"],
                 filename="{epoch}-{step}-{val_loss}-{val_f1}",
             ),
-            ]
+        ],
     )
 
     internal_fit_loop = trainer.fit_loop
@@ -85,6 +85,7 @@ def train_cv(config):
     wandb.finish()
     config["path"]["best_model_path"] = trainer.checkpoint_callback.best_model_path
     logger.save_config(config)
+
 
 def sweep(config, exp_count):
     project_name = config.wandb.project
