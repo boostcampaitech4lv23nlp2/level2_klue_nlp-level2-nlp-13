@@ -1,6 +1,15 @@
 # KLUE-Relation Extraction
 
-## 1️⃣ What's new
+## 1️⃣ Introduction
+문장의 단어(Entity)에 대한 속성과 관계를 예측하는 Task
+- **input:** sentence, subject_entity, object_entity
+- **output:** relation 30개 중 하나를 예측한 pred_label, 그리고 30개 클래스 각각에 대해 예측한 확률 probs
+- **평가지표**
+  - no_relation class를 제외한 micro F1 score
+  - 모든 class에 대한 area under the precision-recall curve (AUPRC)
+  - 2가지 metric으로 평가하며, **micro F1 score가 우선**시 된다. 
+
+## 2️⃣ What's new
 이 repo는 huggingface API 기반의 베이스라인 코드 수정판(dev_hf)과 Pytorch Lightning API 기반 템플렛(main)을 제공합니다. 템플렛은 Lightning trainer를 바탕으로 
 - k-fold CV
 - entity marker
@@ -11,16 +20,6 @@
 - confusion matrix 
 
 등을 지원합니다.   
-
-## 2️⃣ Introduction
-문장의 단어(Entity)에 대한 속성과 관계를 예측하는 Task
-- **input:** sentence, subject_entity, object_entity
-- **output:** relation 30개 중 하나를 예측한 pred_label, 그리고 30개 클래스 각각에 대해 예측한 확률 probs
-- **평가지표**
-  - no_relation class를 제외한 micro F1 score
-  - 모든 class에 대한 area under the precision-recall curve (AUPRC)
-  - 2가지 metric으로 평가하며, **micro F1 score가 우선**시 된다.
-
 ## 3️⃣ 팀원 소개
 
 김별희|이원재|이정아|임성근|정준녕|
@@ -98,7 +97,7 @@ python main.py --mode ensemble
 ```
 
 ### base_config.yaml
-- tokenizer - syllable: True 설정하면 음절 단위 토크나이저 적용 가능
+tokenizer - syllable: True 설정하면 음절 단위 토크나이저 적용 가능
 
 ## 7️⃣ etc
 dict_label_to_num.pkl: 문자 label과 숫자 label로 표현된 dictionary, 총 30개 classes (class는 아래와 같이 정의 되어 있며, 평가를 위해 일치 시켜주시길 바랍니다.) pickle로 load하게 되면, 딕셔너리 형태의 정보를 얻을 수 있습니다.
